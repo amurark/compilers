@@ -5,7 +5,7 @@
 void foo() {
 	int a;
 	read(a);
-	write(a);
+	write(a*2);
 	write("hey ho lets go !!");
 }
 

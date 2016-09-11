@@ -29,8 +29,8 @@ public class Scanner {
 			e.printStackTrace();
 		}
 		
-		System.out.println(inputText);
-		System.out.println("**************************************");
+		//System.out.println(inputText);
+		//System.out.println("**************************************");
 	}
 	
 	public void tokenize() {
@@ -43,13 +43,13 @@ public class Scanner {
 		int startIndex = 0;
 		boolean started = false;
 		Token currToken = null;
-
+		int count = 0;
+		
 		for(int i = 0; i < inputText.length(); i++) {
 			char currChar = inputText.charAt(i);
-			
-//			if(currChar == '\n') {
-//				System.out.println("Line Break");
-//			}
+			if(currChar == '\n') {
+				count++;
+			}
 
 			if(!started) {
 				if(currChar == '#'){
@@ -61,12 +61,10 @@ public class Scanner {
 						currToken = new Token(Tokentype.META_STATEMENT);
 						started = true;
 					}
-				} else if(currChar == '/') {
-					if((i+1 < inputText.length()) && inputText.charAt(i+1) == '/') {
-						startIndex = i;
-						currToken = new Token(Tokentype.META_STATEMENT);
-						started = true;
-					}
+				} else if(currChar == '/' && ((i+1 < inputText.length()) && inputText.charAt(i+1) == '/')) {
+					startIndex = i;
+					currToken = new Token(Tokentype.META_STATEMENT);
+					started = true;
 				} else if(currChar == '"') {
 					startIndex = i;
 					currToken = new Token(Tokentype.STRING);
@@ -114,6 +112,8 @@ public class Scanner {
 					currToken = new Token(Tokentype.DELIMITER);
 					currToken.setName(Character.toString(currChar));
 					tokens.add(currToken);
+				} else {
+					System.out.println("The program has some errors in line "+count);
 				}
 			} else {
 				if(currToken != null && currToken.getTokenType() == Tokentype.STRING) {
@@ -136,7 +136,7 @@ public class Scanner {
 						tokens.add(currToken);
 					}
 				} else if(currToken != null && currToken.getTokenType() == Tokentype.IDENTIFIER) {
-					if(isLetter(currChar) || isDigit(currChar)) {
+					if(isLetter(currChar) || isDigit(currChar) || currChar == '_') {
 						continue;
 					} else {
 						currToken.setName(inputText.substring(startIndex, i));
@@ -146,6 +146,8 @@ public class Scanner {
 						started = false;
 						i--;//Because it has reached the next character.
 					}
+				} else {
+					System.out.println("The program has some errors in line "+count);
 				}
 				
 			}
