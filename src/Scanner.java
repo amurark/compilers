@@ -11,7 +11,7 @@ import java.util.Queue;
 public class Scanner {
 	
 	private Queue<Token> tokens = new LinkedList<Token>();
-	private char[] symbols = {'(', ')', '{', '}', ',', ';', '+', '-', '*', '/', '=', '!', '<', '>', '&', '|'};
+	private char[] symbols = {'(', ')', '{', '}','[', ']', ',', ';', '+', '-', '*', '/', '=', '!', '<', '>', '&', '|'};
 	private String[] raw_keywords = {"int", "void", "if", "while", "return", "read", "write", "print", "continue", "break", "binary", "decimal"};
 	private Map<Character, List<String>> reserved_words = new HashMap<Character, List<String>>();
 	private String inputText = "";
@@ -69,37 +69,11 @@ public class Scanner {
 					startIndex = i;
 					currToken = new Token(Tokentype.STRING);
 					started = true;
-				} else if(currChar == '_' ) { //Identifier
+				} else if(currChar == '_' || isLetter(currChar)) { //Identifier
+					//System.out.println("hey"+currChar);
 					startIndex = i;
 					currToken = new Token(Tokentype.IDENTIFIER);
 					started = true;
-				} else if(isLetter(currChar)) { //Reserved_words or Identifier
-					/**
-					 * Check if its a reserved_word
-					 */
-					boolean isReservedWord = false;
-					String rWord = "";
-					if(reserved_words.containsKey(currChar)) {
-						List<String> kList = reserved_words.get(currChar);
-						for(String word : kList) {
-					    	if(inputText.substring(i, i+word.length()).equals(word)) {
-					    		//System.out.println("Yo, I found a word, "+word+".");
-					    		isReservedWord = true;
-					    		rWord = word;
-					    		break;
-					    	}
-					    }
-					}
-					if(isReservedWord) {
-						currToken = new Token(Tokentype.RESERVED_WORD);
-						currToken.setName(rWord);
-						tokens.add(currToken);
-						i += (rWord.length()-1);
-					} else { //identifier
-						startIndex = i;
-						currToken = new Token(Tokentype.IDENTIFIER);
-						started = true;
-					}
 				} else if(isDigit(currChar)) {
 					currToken = new Token(Tokentype.NUMBER);
 					currToken.setName(Character.toString(currChar));
@@ -114,6 +88,8 @@ public class Scanner {
 					tokens.add(currToken);
 				} else {
 					System.out.println("The program has some errors in line "+count);
+					System.out.println("Unidentified character '"+currChar+"'");
+					break;
 				}
 			} else {
 				if(currToken != null && currToken.getTokenType() == Tokentype.STRING) {
@@ -139,7 +115,32 @@ public class Scanner {
 					if(isLetter(currChar) || isDigit(currChar) || currChar == '_') {
 						continue;
 					} else {
-						currToken.setName(inputText.substring(startIndex, i));
+						
+						String tokenName = inputText.substring(startIndex, i);
+						//System.out.println("wassup"+tokenName);
+						/**
+						 * Check if its a reserved_word
+						 */
+						boolean isReservedWord = false;
+						String rWord = "";
+						if(reserved_words.containsKey(tokenName.charAt(0))) {
+							List<String> kList = reserved_words.get(tokenName.charAt(0));
+							for(String word : kList) {
+						    	if(tokenName.equals(word)) {
+						    		//System.out.println("Yo, I found a word, "+word+".");
+						    		isReservedWord = true;
+						    		rWord = word;
+						    		break;
+						    	}
+						    }
+						}
+						if(isReservedWord) {
+							currToken.setTokenType(Tokentype.RESERVED_WORD);
+							currToken.setName(tokenName);
+						} else {
+							currToken.setName(tokenName);
+						}
+						
 						tokens.add(currToken);
 						currToken = null;
 						startIndex = 0;
@@ -148,14 +149,11 @@ public class Scanner {
 					}
 				} else {
 					System.out.println("The program has some errors in line "+count);
+					System.out.println("Unidentified character '"+currChar+"'");
+					break;
 				}
 				
 			}
-			
-//			if(isSymbol(currChar)) {
-//				System.out.println(currChar);
-//			}
-			
 			
 		}
 		
