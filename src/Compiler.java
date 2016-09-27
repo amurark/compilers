@@ -34,21 +34,22 @@ public class Compiler {
 			/**
 			 * The scanner function which tokenizes the input file and stores the tokens in a queue.
 			 */
-			scanner.tokenize();
+			int error = scanner.tokenize();
+			
+			if(error == 0) {
+				System.out.println("Exiting....");
+				System.exit(0);
+			}
 			
 			if(param2.equals("1")) {
 				Parser parser = new Parser(scanner);
-				if(parser.initialize() == false) {
-					System.out.println("Empty Program");
+				if(parser.initialize()) {
+					System.out.println("Successfully Parsed");
 				} else {
-					if(parser.program()) {
-						System.out.println("Successfully Parsed");
-					} else {
-						System.out.println("Failed to parse");
-					}
+					System.out.println("Failed to parse");
 				}
 				
-			} else if(param2.equals("1")) {
+			} else if(param2.equals("2")) {
 				/**
 				 * Split the input file from the period(.) symbol to create the modified name for the output file.
 				 */
@@ -65,7 +66,8 @@ public class Compiler {
 						/**
 						 * Get the next token to write to the output file.
 						 */
-				        Token t = scanner.GetNextToken();  
+				        Token t = scanner.GetNextToken();
+				        //System.out.println(t.getTokenType()+" "+t.getName() +" hello");
 				        /**
 				         * If the next token is an identifier and its not 'main', then modify the token and prefix it with cs512 before writing to output file
 				         */

@@ -67,7 +67,7 @@ public class Scanner {
 	/**
 	 * This method tokenizes the input program and stores the tokens in a data structure.
 	 */
-	public void tokenize() {
+	public int tokenize() {
 		/**
 		 * Variable to store the start index for a recognized token
 		 */
@@ -84,7 +84,7 @@ public class Scanner {
 		 * Variable to store the number of new lines to identify an error(if any) and the line number.
 		 */
 		int count = 0;
-		
+		int error = 1;
 		/**
 		 * Iterate through the input string character by character and tokenize based on the language rules.
 		 */
@@ -188,17 +188,17 @@ public class Scanner {
 				 */
 				else if(isDigit(currChar)) {
 					/**
-					 * Initialize a new token.
+					 * Store the start index
+					 */
+					startIndex = i;
+					/**
+					 * Initialize a new token
 					 */
 					currToken = new Token(Tokentype.NUMBER);
 					/**
-					 * Set the name of the token
+					 * Set the started flag
 					 */
-					currToken.setName(Character.toString(currChar));
-					/**
-					 * Add the token to the queue.
-					 */
-					tokens.add(currToken);
+					started = true;
 				}
 				/**
 				 * If it starts with a symbol, its a symbol token
@@ -240,6 +240,7 @@ public class Scanner {
 				else {
 					System.out.println("The program has some errors in line "+count);
 					System.out.println("Unidentified character '"+currChar+"'");
+					error = 0;
 					break;
 				}
 			} else {
@@ -293,7 +294,7 @@ public class Scanner {
 						/**
 						 * In this case, add the newLine character as a symbol token to the queue.
 						 */
-						currToken = new Token(Tokentype.SYMBOL);
+						currToken = new Token(Tokentype.DELIMITER); //check
 						currToken.setName(Character.toString(currChar));
 						tokens.add(currToken);
 					}
@@ -363,15 +364,55 @@ public class Scanner {
 					}
 				}
 				/**
+				 * If the current token is an IDENTIFIER
+				 */
+				else if(currToken != null && currToken.getTokenType() == Tokentype.NUMBER) {
+					/**
+					 * If the current character satisfies the criteria of a NUMBER, then continue.
+					 */
+					if(isDigit(currChar)) {
+						continue;
+					} else {
+						/**
+						 * Get the token value out of the string once the character does not satisfy the criteria of a number.
+						 */
+						String tokenName = inputText.substring(startIndex, i);
+
+						/**
+						 * Else add it as a NUMBER token to the queue.
+						 */
+						currToken.setName(tokenName);
+						
+						/**
+						 * Add the token to the queue.
+						 */
+						tokens.add(currToken);
+						/**
+						 * Reinitialize the currToken object to null
+						 */
+						currToken = null;
+						/**
+						 * Reinitialize the startIndex to 0.
+						 */
+						startIndex = 0;
+						/**
+						 * Reset the started flag to false.
+						 */
+						started = false;
+						i--;//Because it has reached the next character.
+					}
+				}
+				/**
 				 * If its none of the above, then it does not follow the language specs and the scanner will throw an error.
 				 */
 				else {
 					System.out.println("The program has some errors in line "+count);
 					System.out.println("Unidentified character '"+currChar+"'");
-					break;
+					error = 0;
 				}
 			}
 		}
+		return error;
 	}
 	
 	/**

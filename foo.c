@@ -5,8 +5,8 @@
 void foo() {
 	int a;
 	read(a);
-	write(a*2);
-	write("hey ho lets go !!");
+	write(a*223);
+	print("hey ho lets go !!");
 }
 
 int main() {
