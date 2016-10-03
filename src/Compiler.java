@@ -21,7 +21,6 @@ public class Compiler {
 			System.exit(0);
 		} else {
 			String filename = args[0];
-			String param2 = args[1];
 			/**
 			 * Initialize the scanner object with the filename.
 			 */
@@ -37,17 +36,22 @@ public class Compiler {
 			int error = scanner.tokenize();
 			
 			if(error == 0) {
-				System.out.println("Exiting....");
+				//System.out.println("Exiting....");
 				System.exit(0);
 			}
-			
+			/**
+			 * Hardcoded value to run the Parser Program.
+			 */
+			String param2 = "1";
+			/**
+			 * Run Parser if param2 = 1, otherwise just run scanner.
+			 */
 			if(param2.equals("1")) {
 				Parser parser = new Parser(scanner);
-				if(parser.initialize()) {
-					System.out.println("Successfully Parsed");
-				} else {
-					System.out.println("Failed to parse");
-				}
+				/**
+				 * Initialize parser.
+				 */
+				parser.initialize();
 				
 			} else if(param2.equals("2")) {
 				/**

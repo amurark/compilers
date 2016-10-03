@@ -238,8 +238,9 @@ public class Scanner {
 				 * If its none of the above, then it does not follow the language specs and the scanner will throw an error.
 				 */
 				else {
-					System.out.println("The program has some errors in line "+count);
-					System.out.println("Unidentified character '"+currChar+"'");
+					//System.out.println("The program has some errors in line "+count);
+					//System.out.println("Unidentified character '"+currChar+"'");
+					System.out.println("Error in Scanner: Invalid token in source file %");
 					error = 0;
 					break;
 				}
@@ -406,8 +407,9 @@ public class Scanner {
 				 * If its none of the above, then it does not follow the language specs and the scanner will throw an error.
 				 */
 				else {
-					System.out.println("The program has some errors in line "+count);
-					System.out.println("Unidentified character '"+currChar+"'");
+					//System.out.println("The program has some errors in line "+count);
+					//System.out.println("Unidentified character '"+currChar+"'");
+					System.out.println("Error in Scanner: Invalid token in source file %");
 					error = 0;
 				}
 			}

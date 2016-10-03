@@ -38,7 +38,7 @@ int main(void)
     bound = 16;
 
     initialize_array();
-    
+
     idx = 0;
 
     print("The first few digits of the Fibonacci sequence are:\n");
