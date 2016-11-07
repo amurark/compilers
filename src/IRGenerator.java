@@ -6,12 +6,12 @@ import java.util.List;
  * @author Ankit
  *
  */
-
-public class Parser {
+public class IRGenerator {
 	/**
 	 * Instance of Scanner
 	 */
 	public Scanner scanner;
+	private IRProcessHandler iph;
 	/**
 	 * Stores the current token as returned by the GetNextToken method of Scanner
 	 */
@@ -30,11 +30,38 @@ public class Parser {
 	private int statementCount = 0;
 	
 	/**
+	 * For IR
+	 */
+	private boolean expressionFlag = false;
+	private List<Token> expressionValue = new ArrayList<Token>();
+	private List<List<Token>> exprList = new ArrayList<List<Token>>();
+	
+	/**
+	 * For IR
+	 */
+	private boolean ifFlag = false;
+	private List<String> ifValue = new ArrayList<String>();
+	private List<List<String>> ifList = new ArrayList<List<String>>();
+	
+	/**
+	 * For IR
+	 */
+	private boolean funcDeclFlag = false;
+	private boolean funcFlag = false;
+	private int parameterCount = 0;
+	private List<String> paramList = new ArrayList<String>();
+	private String funcName;
+	private int localVariableCount = 0;
+	private List<String> lVarList = new ArrayList<String>();
+	
+	
+	/**
 	 * Get the scanner object.
 	 * @param scanner
 	 */
-	public Parser(Scanner scanner) {
+	public IRGenerator(Scanner scanner) {
 		this.scanner = scanner;
+		this.iph = new IRProcessHandler();
 	}
 	
 	/**
@@ -62,6 +89,17 @@ public class Parser {
 			} else {
 				if(x) {
 					System.out.println("Pass. variable "+varCount+" function "+funcCount+" statement "+statementCount);
+					
+					for(int i = 0; i < this.exprList.size(); i++) {
+						for(int j = 0; j < this.exprList.get(i).size(); j++) {
+							//System.out.print(this.exprList.get(i).get(j).getName());
+						}
+						//System.out.println();
+						ThreeAddressCode tac = new ThreeAddressCode(this.exprList.get(i),0);
+					}
+					for(int i = 0; i < this.ifList.size(); i++) {
+						//System.out.println(this.ifList.get(i));
+					}
 				} else {
 					System.out.println("Error in parsing the program.");
 				}
@@ -77,6 +115,17 @@ public class Parser {
 		 * Before getting the next token, check if scanner has more tokens.
 		 */
 		if(this.scanner.HasMoreTokens()) {
+			//For IR
+			if(this.word != null) {
+				if(!this.funcFlag) {
+					iph.addToOutputList(this.currentToken);
+				} else {
+					if(!this.expressionFlag) {
+						FunctionTokens ft = new FunctionTokens(this.currentToken);
+						iph.addToFunctionTokenList(ft);
+					}
+				}
+			}
 			/**
 			 * Initialize currentToken
 			 */
@@ -85,6 +134,16 @@ public class Parser {
 			 * Initialize currentToken's value
 			 */
 			this.word = this.currentToken.getName();
+			
+			/**
+			 * For IR
+			 */
+			if(this.expressionFlag) {
+				this.makeExpression(this.currentToken);
+			}
+			if(this.ifFlag) {
+				this.makeIfBlock(this.word);
+			}
 			/**
 			 * Initialize currentToken's type
 			 */
@@ -98,7 +157,7 @@ public class Parser {
 			}
 		}
 	}
-	
+
 	/**
 	 * <program>
 	 * @return
@@ -118,6 +177,8 @@ public class Parser {
 	 */
 	private boolean program_1() {
 		if(type == Tokentype.IDENTIFIER) {
+			//For IR
+			this.funcName = word;
 			nextWord();
 			return program_11();
 		} else {
@@ -131,11 +192,19 @@ public class Parser {
 	 */
 	private boolean program_11() {
 		if(word.equals("(")) {
+			//For IR
+			funcDeclFlag = true;
 			nextWord();
 			if(parameter_list() == false) {
 				return false;
 			} else {
 				if(word.equals(")")) {
+					//For IR
+					funcDeclFlag = false;
+					iph.functionHandler(this.paramList, this.parameterCount, this.funcName);
+					parameterCount = 0;
+					this.paramList = new ArrayList<String>();
+					this.lVarList = new ArrayList<String>();
 					nextWord();
 					return program_111();
 				} else {
@@ -190,6 +259,8 @@ public class Parser {
 			nextWord();
 			return func_list();
 		} else if(word.equals("{")) {
+			//For IR
+			this.funcFlag = true;
 			nextWord();
 			this.funcCount++;
 			if(data_decls() == false) {
@@ -199,6 +270,10 @@ public class Parser {
 					return false;
 				} else {
 					if(word.equals("}")) {
+						iph.processFunction(this.localVariableCount, this.lVarList);
+						this.localVariableCount = 0;
+						this.funcFlag = false;
+						
 						nextWord();
 						boolean a = func_list();
 						return a;
@@ -276,15 +351,22 @@ public class Parser {
 			return true;
 		} else {
 			if(word.equals("{")) {
+				//For IR
+				this.funcFlag = true;
 				nextWord();
 				this.funcCount++;
 				if(data_decls() == false) {
 					return false;
 				} else {
+					
 					if(statements() == false) {
 						return false;
 					} else {
 						if(word.equals("}")) {
+							//For IR
+							iph.processFunction(this.localVariableCount, this.lVarList);
+							this.localVariableCount = 0;
+							this.funcFlag = false;
 							nextWord();
 							return true;
 						} else {
@@ -306,7 +388,11 @@ public class Parser {
 		if(type_name() == false) {
 			return false;
 		} else {
+			//For IR
+			funcDeclFlag = true;
 			if(type == Tokentype.IDENTIFIER) {
+				//For IR
+				this.funcName = word;
 				nextWord();
 				if(word.equals("(")) {
 					nextWord();
@@ -315,6 +401,12 @@ public class Parser {
 					} else {
 						if(word.equals(")")) {
 							nextWord();
+							//For IR
+							funcDeclFlag = false;
+							iph.functionHandler(this.paramList, this.parameterCount, this.funcName);
+							parameterCount = 0;
+							this.paramList = new ArrayList<String>();
+							this.lVarList = new ArrayList<String>();
 							return true;
 						} else {
 							return false;
@@ -348,8 +440,16 @@ public class Parser {
 	 */
 	private boolean parameter_list() {
 		if(word.equals("int") || word.equals("binary") || word.equals("decimal")) {
+			//For IR
+			if(funcDeclFlag) {
+				parameterCount++;
+			}
 			nextWord();
 			if(type == Tokentype.IDENTIFIER) {
+				//For IR
+				if(funcDeclFlag) {
+					paramList.add(word);
+				}
 				nextWord();
 				return non_empty_list_1();	
 			} else {
@@ -409,7 +509,15 @@ public class Parser {
 			if(type_name() == false) {
 				return false;
 			} else {
+				//For IR
+				if(funcDeclFlag) {
+					parameterCount++;
+				}
 				if(type == Tokentype.IDENTIFIER) {
+					//For IR
+					if(funcDeclFlag) {
+						paramList.add(word);
+					}
 					nextWord();
 					if(non_empty_list_1() == false) {
 						return false;
@@ -431,6 +539,7 @@ public class Parser {
 	 */
 	private boolean data_decls() {
 		if(word.equals("int") || word.equals("void") || word.equals("binary") || word.equals("decimal")) {
+			this.localVariableCount++;
 			nextWord();
 			if(id_list() == false) {
 				return false;
@@ -465,6 +574,7 @@ public class Parser {
 	 */
 	private boolean id_list_1() {
 		if(word.equals(",")) {
+			this.localVariableCount++;
 			nextWord();
 			if(id() == false) {
 				return false;
@@ -482,6 +592,7 @@ public class Parser {
 	 */
 	private boolean id() {
 		if(type == Tokentype.IDENTIFIER) {
+			lVarList.add(word);
 			nextWord();
 			this.varCount++;
 			return id_1();
@@ -500,6 +611,7 @@ public class Parser {
 			if(expression() == false) {
 				return false;
 			} else {
+				endExpression();
 				if(word.equals("]")) {
 					nextWord();
 					return true;
@@ -523,6 +635,10 @@ public class Parser {
 				return false;
 			} else {
 				if(word.equals("}")) {
+					//For IR
+					ifFlag = false;
+					ifList.add(ifValue);
+					ifValue = new ArrayList<String>();
 					nextWord();
 					return true;
 				} else {
@@ -602,6 +718,7 @@ public class Parser {
 				if(expression() == false) {
 					return false;
 				} else {
+					endExpression();
 					if(word.equals(")")) {
 						nextWord();
 						if(word.equals(";")) {
@@ -656,7 +773,7 @@ public class Parser {
 		} else {
 			if(word.equals("(")) {
 				nextWord();
-				if(expr_list() == true) {
+				if(expr_list(false) == true) {
 					if(word.equals(")")) {
 						nextWord();
 						if(word.equals(";")) {
@@ -701,6 +818,7 @@ public class Parser {
 			if(expression() == false) {
 				return false;
 			} else {
+				endExpression();
 				if(word.equals(";")) {
 					nextWord();
 					return true;
@@ -713,6 +831,7 @@ public class Parser {
 			if(expression() == false) {
 				return false;
 			} else {
+				endExpression();
 				if(word.equals("]")) {
 					nextWord();
 					if(word.equals("=")) {
@@ -720,6 +839,7 @@ public class Parser {
 						if(expression() == false) {
 							return false;
 						} else {
+							endExpression();
 							if(word.equals(";")) {
 								nextWord();
 								return true;
@@ -748,7 +868,7 @@ public class Parser {
 			nextWord();
 			if(word.equals("(")) {
 				nextWord();
-				if(expr_list() == false) {
+				if(expr_list(false) == false) {
 					return false;
 				} else {
 					if(word.equals(")")) {
@@ -775,8 +895,8 @@ public class Parser {
 	 * <expr list>
 	 * @return
 	 */
-	private boolean expr_list() {
-		if(non_empty_expr_list() == false) {
+	private boolean expr_list(boolean factorFlag) {
+		if(non_empty_expr_list(factorFlag) == false) {
 			return true;
 		} else {
 			return true;
@@ -787,11 +907,14 @@ public class Parser {
 	 * <non-empty expr list>
 	 * @return
 	 */
-	private boolean non_empty_expr_list() {
+	private boolean non_empty_expr_list(boolean factorFlag) {
 		if(expression() == false) {
 			return false;
 		} else {
-			return non_empty_expr_list_1();
+			if(factorFlag == true) {} else {
+				endExpression();
+			}
+			return non_empty_expr_list_1(factorFlag);
 		}
 	}
 
@@ -799,13 +922,16 @@ public class Parser {
 	 * <non-empty expr list>`
 	 * @return
 	 */
-	private boolean non_empty_expr_list_1() {
+	private boolean non_empty_expr_list_1(boolean factorFlag) {
 		if(word.equals(",")) {
 			nextWord();
 			if(expression() == false) {
 				return false;
 			} else {
-				return non_empty_expr_list_1();
+				if(factorFlag == true) {} else {
+					endExpression();
+				}
+				return non_empty_expr_list_1(factorFlag);
 			}
 		} else {
 			return true;
@@ -818,6 +944,11 @@ public class Parser {
 	 */
 	private boolean if_statement() {
 		if(word.equals("if")) {
+			
+			//For IR
+			ifFlag = true;
+			makeIfBlock(word);
+			
 			nextWord();
 			if(word.equals("(")) {
 				nextWord();
@@ -905,12 +1036,14 @@ public class Parser {
 		if(expression() == false) {
 			return false;
 		} else {
+			endExpression();
 			if(comparison_op() == false) {
 				return false;
 			} else {
 				if(expression() == false) {
 					return false;
 				} else {
+					endExpression();
 					return true;
 				}
 			}
@@ -1014,6 +1147,7 @@ public class Parser {
 			if(expression() == false) {
 				return false;
 			} else {
+				endExpression();
 				if(word.equals(";")) {
 					nextWord();
 					return true;
@@ -1065,13 +1199,19 @@ public class Parser {
 	 * @return
 	 */
 	private boolean expression() {
+		boolean ans = false;
+		startExpression();
+		
 		if(term() == false) {
-			return false;
+			ans = false;
 		} else {
-			return expression_1();
+			ans = expression_1();
 		}
+		return ans;
 	}
 	
+	
+
 	/**
 	 * <expression>`
 	 * @return
@@ -1208,7 +1348,7 @@ public class Parser {
 			}
 		} else if(word.equals("(")) {
 			nextWord();
-			if(expr_list() == false) {
+			if(expr_list(true) == false) {
 				return false;
 			} else {
 				if(word.equals(")")) {
@@ -1221,5 +1361,41 @@ public class Parser {
 		} else {
 			return true;
 		}
+	}
+	
+	private void startExpression() {
+		if(this.expressionFlag == false) {
+			this.expressionFlag = true;
+			makeExpression(this.currentToken);
+		}
+	}
+	
+	private void endExpression() {
+		if(!this.expressionValue.isEmpty()) {
+			this.expressionValue.remove(this.expressionValue.size()-1);
+			if(!this.expressionValue.isEmpty()) {
+				this.exprList.add(this.expressionValue);
+				//For IR
+				StringBuilder expVal = new StringBuilder();
+				for(int i = 0; i < this.expressionValue.size(); i++) {
+					expVal.append(expressionValue.get(i).getName());
+				}
+				Token t1 = new Token(Tokentype.EXPRESSION);
+				t1.setName(expVal.toString());
+				FunctionTokens ft1 = new FunctionTokens(t1);
+				ft1.setL(this.expressionValue);
+				iph.addToFunctionTokenList(ft1);
+				this.expressionValue = new ArrayList<Token>();
+			}
+		}
+		this.expressionFlag = false;
+	}
+	
+	private void makeExpression(Token token) {
+		this.expressionValue.add(token);
+	}
+	
+	private void makeIfBlock(String word) {
+		this.ifValue.add(word);
 	}
 }

@@ -42,7 +42,7 @@ public class Compiler {
 			/**
 			 * Hardcoded value to run the Parser Program.
 			 */
-			String param2 = "1";
+			String param2 = "2";
 			/**
 			 * Run Parser if param2 = 1, otherwise just run scanner.
 			 */
@@ -54,6 +54,38 @@ public class Compiler {
 				parser.initialize();
 				
 			} else if(param2.equals("2")) {
+				
+				Parser parser = new Parser(scanner);
+				/**
+				 * Initialize parser.
+				 */
+				parser.initialize();
+				
+				/**
+				 * Initialize the scanner object with the filename.
+				 */
+				Scanner sc = new Scanner("./"+filename);
+				/**
+				 * Create a data structure for the reserved words.
+				 */
+				sc.buildReservedWordsMap();
+				
+				/**
+				 * The scanner function which tokenizes the input file and stores the tokens in a queue.
+				 */
+				int err = sc.tokenize();
+				
+				if(err == 0) {
+					//System.out.println("Exiting....");
+					System.exit(0);
+				}
+				
+				IRGenerator ir = new IRGenerator(sc);
+				/**
+				 * Initialize parser.
+				 */
+				ir.initialize();
+			} else if(param2.equals("3")) {
 				/**
 				 * Split the input file from the period(.) symbol to create the modified name for the output file.
 				 */
