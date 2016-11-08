@@ -2,6 +2,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Stack;
 
 public class IRProcessHandler {
 	List<Token> outputTokens = new ArrayList<Token>();
@@ -12,6 +13,8 @@ public class IRProcessHandler {
 	int paramCount;
 	int localVarCount;
 	String funcName;
+	
+	int labelCount = 1;
 	
 	public IRProcessHandler() {}
 	public void addToOutputList(Token currentToken) {
@@ -42,23 +45,24 @@ public class IRProcessHandler {
 		this.functionTokenList = new ArrayList<FunctionTokens>();
 	}
 	
+	//Called when a function ends
 	public void processFunction(int localVarCount, List<String> lVarList) {
-		System.out.println("\nFunction Name: "+this.funcName);
-		System.out.println("Param Count: "+this.paramCount);
-		System.out.println("Local Variable Count: "+localVarCount);
-		System.out.println("Params are:");
+//		System.out.println("\nFunction Name: "+this.funcName);
+//		System.out.println("Param Count: "+this.paramCount);
+//		System.out.println("Local Variable Count: "+localVarCount);
+//		System.out.println("Params are:");
 		for(int i = 0; i < paramList.size(); i++) {
-			System.out.print(paramList.get(i));
+			//System.out.print(paramList.get(i));
 		}
-		System.out.println("\nLocal Variables are:");
+		//System.out.println("\nLocal Variables are:");
 		for(int i = 0; i < lVarList.size(); i++) {
-			System.out.print(lVarList.get(i));
+			//System.out.print(lVarList.get(i));
 		}
-		System.out.println("\nFunc is: ");
+		//System.out.println("\nFunc is: ");
 		for(int i = 0; i < functionTokenList.size(); i++) {
-			System.out.print(functionTokenList.get(i).getT().getName());
+			//System.out.print(functionTokenList.get(i).getT().getName());
 			if(functionTokenList.get(i).getT().getTokenType() == Tokentype.EXPRESSION) {
-				System.out.print("(expr)");
+				//System.out.print("(expr)");
 			}
 		}
 		
@@ -136,15 +140,123 @@ public class IRProcessHandler {
 		Token closeBrace = new Token(Tokentype.SYMBOL);
 		closeBrace.setName("}");
 		functionTokenList.add(new FunctionTokens(closeBrace));
+		processIfStatements();
 		System.out.println("\nFunc after conversion is: ");
 		for(int i = 0; i < functionTokenList.size(); i++) {
 			if(functionTokenList.get(i).getT().getTokenType() != Tokentype.EXPRESSION) {
 				System.out.print(functionTokenList.get(i).getT().getName());
 			}
 		}
+		System.out.println("=================");
+	}
+	
+	private void processIfStatements() {
+		Stack<String> endingLabels = new Stack<String>();
+		int ifFlag = 0;
+		String startLabel = "", endLabel = "";
+		for(int i = 0; i < functionTokenList.size(); i++) {
+			Token t = functionTokenList.get(i).getT();
+			if(t.getName().equals("if")) {
+				startLabel = "C"+labelCount;
+				labelCount++;
+				endLabel = "C"+labelCount;
+				labelCount++;
+				endingLabels.push(endLabel);
+				ifFlag++;
+			}
+			if(t.getName().equals("{") && ifFlag > 0) {
+				t.setTokenType(Tokentype.IDENTIFIER);
+				t.setName("goto ");
+				
+				i++;
+				
+				addSemicolon(i,functionTokenList);
+				addColon(i,functionTokenList);
+				
+				Token l2 = new Token(Tokentype.IDENTIFIER);
+				l2.setName(startLabel);
+				FunctionTokens ft5 = new FunctionTokens(l2);
+				functionTokenList.add(i,ft5);
+				
+				//For friggin indentation
+				for(int j = 0; j < ifFlag*2; j++) {
+					addSpace(i,functionTokenList);
+				}
+				
+				addSpace(i,functionTokenList);
+				addNewLine(i,functionTokenList);
+				addSemicolon(i,functionTokenList);
+				
+				Token l1 = new Token(Tokentype.IDENTIFIER);
+				l1.setName(endLabel);
+				FunctionTokens ft4 = new FunctionTokens(l1);
+				functionTokenList.add(i,ft4);
+				
+				
+				Token i1 = new Token(Tokentype.IDENTIFIER);
+				i1.setName("goto ");
+				FunctionTokens ft3 = new FunctionTokens(i1);
+				functionTokenList.add(i,ft3);
+				
+				//For friggin indentation
+				for(int j = 0; j < ifFlag*2; j++) {
+					addSpace(i,functionTokenList);
+				}
+				
+				
+				addNewLine(i,functionTokenList);
+				addSemicolon(i,functionTokenList);
+				
+				Token l = new Token(Tokentype.IDENTIFIER);
+				l.setName(startLabel);
+				FunctionTokens ft1 = new FunctionTokens(l);
+				functionTokenList.add(i,ft1);
+				
+				i+=10;
+				//For friggin indentation
+				i+= (ifFlag*4);
+			}
+			
+			if(t.getName().equals("}") && ifFlag > 0) {
+				ifFlag--;
+				t.setTokenType(Tokentype.IDENTIFIER);
+				String eLabel = endingLabels.pop();
+				t.setName(eLabel);
+				i++;
+				addSemicolon(i,functionTokenList);
+				addColon(i,functionTokenList);
+				i+=1;
+			}
+		}
 		
 	}
 	
+	private void addColon(int i, List<FunctionTokens> functionTokenList) {
+		Token t = new Token(Tokentype.SYMBOL);
+		t.setName(":");
+		FunctionTokens ft = new FunctionTokens(t);
+		functionTokenList.add(i, ft);
+	}
+	
+	private void addSemicolon(int i, List<FunctionTokens> functionTokenList) {
+		Token t = new Token(Tokentype.SYMBOL);
+		t.setName(";");
+		FunctionTokens ft = new FunctionTokens(t);
+		functionTokenList.add(i, ft);
+	}
+	
+	private void addSpace(int i, List<FunctionTokens> functionTokenList) {
+		Token t = new Token(Tokentype.DELIMITER);
+		t.setName(" ");
+		FunctionTokens ft = new FunctionTokens(t);
+		functionTokenList.add(i, ft);
+	}
+	private void addNewLine(int i, List<FunctionTokens> functionTokenList) {
+		Token t = new Token(Tokentype.DELIMITER);
+		t.setName("\n");
+		FunctionTokens ft = new FunctionTokens(t);
+		functionTokenList.add(i, ft);
+	}
 	private String getThreeAddressCodeExpression(ThreeAddressCode tac, int count) {
 		StringBuilder x = new StringBuilder();
 		for(int i = 0; i < tac.localVariables.size(); i++) {

@@ -39,9 +39,9 @@ public class IRGenerator {
 	/**
 	 * For IR
 	 */
-	private boolean ifFlag = false;
-	private List<String> ifValue = new ArrayList<String>();
-	private List<List<String>> ifList = new ArrayList<List<String>>();
+	private int ifFlag = 0;
+	private List<Token> ifValue = new ArrayList<Token>();
+	private List<List<Token>> ifList = new ArrayList<List<Token>>();
 	
 	/**
 	 * For IR
@@ -98,7 +98,10 @@ public class IRGenerator {
 						ThreeAddressCode tac = new ThreeAddressCode(this.exprList.get(i),0);
 					}
 					for(int i = 0; i < this.ifList.size(); i++) {
-						//System.out.println(this.ifList.get(i));
+						for( int j = 0; j < this.ifList.get(i).size(); j++) {
+							//System.out.print(this.ifList.get(i).get(j).getName());
+						}
+						//System.out.println();
 					}
 				} else {
 					System.out.println("Error in parsing the program.");
@@ -141,8 +144,8 @@ public class IRGenerator {
 			if(this.expressionFlag) {
 				this.makeExpression(this.currentToken);
 			}
-			if(this.ifFlag) {
-				this.makeIfBlock(this.word);
+			if(this.ifFlag > 0) {
+				this.makeIfBlock(this.currentToken);
 			}
 			/**
 			 * Initialize currentToken's type
@@ -636,9 +639,9 @@ public class IRGenerator {
 			} else {
 				if(word.equals("}")) {
 					//For IR
-					ifFlag = false;
+					ifFlag--;
 					ifList.add(ifValue);
-					ifValue = new ArrayList<String>();
+					ifValue = new ArrayList<Token>();
 					nextWord();
 					return true;
 				} else {
@@ -944,11 +947,9 @@ public class IRGenerator {
 	 */
 	private boolean if_statement() {
 		if(word.equals("if")) {
-			
 			//For IR
-			ifFlag = true;
-			makeIfBlock(word);
-			
+			ifFlag++;
+			makeIfBlock(this.currentToken);
 			nextWord();
 			if(word.equals("(")) {
 				nextWord();
@@ -1395,7 +1396,7 @@ public class IRGenerator {
 		this.expressionValue.add(token);
 	}
 	
-	private void makeIfBlock(String word) {
-		this.ifValue.add(word);
+	private void makeIfBlock(Token t) {
+		this.ifValue.add(t);
 	}
 }
