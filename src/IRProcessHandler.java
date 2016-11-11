@@ -24,19 +24,19 @@ public class IRProcessHandler {
 		return outputTokens.size()-1;
 	}
 	
-	public void handleExpressions(List<Token> expressionValue) {
-		ThreeAddressCode tac = new ThreeAddressCode(expressionValue,0);
-		Token t = new Token(Tokentype.IDENTIFIER);
-		t.setName(tac.valueStack.pop());
-		outputTokens.add(t);
-		//System.out.println("=======");
-		for(int i = 0; i < tac.valueStack.size(); i++) {
-			//System.out.println(tac.valueStack.pop());
-		}
-		for(int i = 0; i < tac.localVariables.size(); i++) {
-			//System.out.println(tac.localVariables.get(i));
-		}
-	}
+//	public void handleExpressions(List<Token> expressionValue) {
+//		ThreeAddressCode tac = new ThreeAddressCode(expressionValue,0);
+//		Token t = new Token(Tokentype.IDENTIFIER);
+//		t.setName(tac.valueStack.pop());
+//		outputTokens.add(t);
+//		//System.out.println("=======");
+//		for(int i = 0; i < tac.valueStack.size(); i++) {
+//			//System.out.println(tac.valueStack.pop());
+//		}
+//		for(int i = 0; i < tac.localVariables.size(); i++) {
+//			//System.out.println(tac.localVariables.get(i));
+//		}
+//	}
 	
 	public void functionHandler(List<String> paramList, int paramCount, String funcName) {
 		this.paramCount = paramCount;
@@ -65,19 +65,36 @@ public class IRProcessHandler {
 				//System.out.print("(expr)");
 			}
 		}
+		//System.out.println("done");
 		
+		/**
+		 * List of variables in the function, including the parameters and also the 3 address expressions.
+		 */
 		List<String> varList = new ArrayList<String>();
+		/**
+		 * This is also used for the same reason, in parallel with varList
+		 */
 		Map<String, Integer> varMap = new HashMap<String, Integer>();
 		
+		/**
+		 * Add all the parameters to the VARLIST
+		 */
 		for(int i = 0; i < paramList.size(); i++) {
 			varList.add(paramList.get(i));
 			varMap.put(paramList.get(i), varList.size()-1);
 		}
 		
+		/**
+		 * Add all the localVariables(we do have the count(passed as params to this function)).
+		 */
 		for(int i = 0; i < lVarList.size(); i++) {
 			varList.add(lVarList.get(i));
 			varMap.put(lVarList.get(i), varList.size()-1);
 		}
+		/**
+		 * Count of total variables including intermediate 3AC expressions
+		 */
+		int varCount = varList.size();
 		//functionTokenList is of type functionToken
 		for(int i = 0; i < functionTokenList.size(); i++) {
 			Token t = functionTokenList.get(i).getT();
@@ -100,8 +117,8 @@ public class IRProcessHandler {
 				 * If the expression is not a single identifier and is actually an arithmetic expression
 				 */
 				if(count > 1) {
-					ThreeAddressCode tac = new ThreeAddressCode(expTokens, varList.size());
-					String express = getThreeAddressCodeExpression(tac, varList.size());
+					ThreeAddressCode tac = new ThreeAddressCode(expTokens, varList, varMap);
+					String express = getThreeAddressCodeExpression(tac, varList, varMap);
 					if(express != null) {
 						functionTokenList.get(i).getT().setName(tac.valueStack.peek());
 						functionTokenList.get(i).getT().setTokenType(Tokentype.IDENTIFIER);
@@ -137,22 +154,132 @@ public class IRProcessHandler {
 				}
 			}
 		}
-		Token closeBrace = new Token(Tokentype.SYMBOL);
-		closeBrace.setName("}");
-		functionTokenList.add(new FunctionTokens(closeBrace));
+		//THIS WAS GIVING DOUBLE CLOSING BRACE FOR FUNCTIONS
+//		Token closeBrace = new Token(Tokentype.SYMBOL);
+//		closeBrace.setName("}");
+//		functionTokenList.add(new FunctionTokens(closeBrace));
 		processIfStatements();
-		System.out.println("\nFunc after conversion is: ");
+		processDataDeclarations(varList.size(), lVarList);
 		for(int i = 0; i < functionTokenList.size(); i++) {
 			if(functionTokenList.get(i).getT().getTokenType() != Tokentype.EXPRESSION) {
-				System.out.print(functionTokenList.get(i).getT().getName());
+				outputTokens.add(functionTokenList.get(i).getT());
 			}
 		}
-		System.out.println("=================");
+		
+		System.out.println("\nFunc after conversion is: ");
+		
+		//System.out.println("*****************");
+		for(int i = 0; i < functionTokenList.size(); i++) {
+			if(functionTokenList.get(i).getT().getTokenType() != Tokentype.EXPRESSION) {
+				//System.out.print(functionTokenList.get(i).getT().getName());
+			}
+		}
+		//System.out.println("=================");
 	}
 	
+	public void displayOutputTokens() {
+		for(int i = 0; i < outputTokens.size(); i++) {
+			System.out.print(outputTokens.get(i).getName());
+		}
+	}
+	
+	private void processDataDeclarations(int varCount, List<String> lVarList) {
+		boolean declFlag = false;
+		int startIndex = 0, endIndex = 0;
+		/**
+		 * Get the index for the 'int' keyword and the endIndex where the declaration statement ends.
+		 */
+		for(int i = 0; i < functionTokenList.size(); i++) {
+			Token t = functionTokenList.get(i).getT();
+			if(t.getName().equals("int")) {
+				declFlag = true;
+				startIndex = i;
+			}
+			if(declFlag) {
+				if(t.getName().equals(";")) {
+					endIndex = i;
+					declFlag = false;
+					break;
+				}
+			}
+		}
+		/**
+		 * Remove all the variables declared between 'int' and ';'
+		 */
+		for(int i = startIndex+2; i < endIndex; i++) {
+			functionTokenList.remove(startIndex+2);
+		}
+		
+		/**
+		 * To remove all declarations other than the first one, which is already modified.
+		 */
+		for(int i = startIndex+4; i < functionTokenList.size(); i++) {
+			Token t = functionTokenList.get(i).getT();
+			if(t.getName().equals("int")) {
+				while(!t.getName().equals("\n")) {
+					functionTokenList.remove(i);
+					t = functionTokenList.get(i).getT();
+				}
+				functionTokenList.remove(i);
+			}
+		}
+		
+		/**
+		 * IF: 
+		 * There is a declaration in the function.
+		 * Add the LOCAL array declaration along with the size.
+		 * ELSE:
+		 * If there is no declaration in the function, but there are expressions formed later in the functions.
+		 * Then declare a 'LOCAL' array.
+		 */
+		int place = 0;
+		if(startIndex != 0) {
+			Token l = new Token(Tokentype.IDENTIFIER);
+			l.setName("LOCAL["+varCount+"]");
+			FunctionTokens ft = new FunctionTokens(l);
+			functionTokenList.add(startIndex+2, ft);
+			place = 5;
+		} else {
+			if(varCount > 0) {
+				Token l = new Token(Tokentype.IDENTIFIER);
+				l.setName("int LOCAL["+varCount+"];\n");
+				FunctionTokens ft = new FunctionTokens(l);
+				functionTokenList.add(startIndex+2, ft);
+				place = 3;
+			}
+		}
+		
+		/**
+		 * For all the parameters in the function, add initializations. e.g
+		 * func abc(int a){
+		 * LOCAL[0] = a;
+		 * }
+		 */
+		for(int i = this.paramCount-1; i >= 0; i--) {
+			
+			addNewLine(startIndex+place, functionTokenList);
+			
+			addSemicolon(startIndex+place, functionTokenList);
+			
+			Token l3 = new Token(Tokentype.IDENTIFIER);
+			l3.setName(paramList.get(i));
+			FunctionTokens ft3 = new FunctionTokens(l3);
+			functionTokenList.add(startIndex+place, ft3);
+			
+			Token l2 = new Token(Tokentype.SYMBOL);
+			l2.setName("=");
+			FunctionTokens ft2 = new FunctionTokens(l2);
+			functionTokenList.add(startIndex+place, ft2);
+			
+			Token l1 = new Token(Tokentype.IDENTIFIER);
+			l1.setName("LOCAL["+i+"]");
+			FunctionTokens ft1 = new FunctionTokens(l1);
+			functionTokenList.add(startIndex+place, ft1);
+		}
+	}
 	private void processIfStatements() {
-		Stack<String> endingLabels = new Stack<String>();
-		int ifFlag = 0;
+		Stack<Integer> endingLabels = new Stack<Integer>();
+		Stack<String> openingBlocks = new Stack<String>();
 		String startLabel = "", endLabel = "";
 		for(int i = 0; i < functionTokenList.size(); i++) {
 			Token t = functionTokenList.get(i).getT();
@@ -160,12 +287,34 @@ public class IRProcessHandler {
 				startLabel = "C"+labelCount;
 				labelCount++;
 				endLabel = "C"+labelCount;
+				endingLabels.push(labelCount);
 				labelCount++;
-				endingLabels.push(endLabel);
-				ifFlag++;
+				openingBlocks.add("if");
 			}
-			if(t.getName().equals("{") && ifFlag > 0) {
-				t.setTokenType(Tokentype.IDENTIFIER);
+			if(t.getName().equals("while")) {
+				int loopLabel = labelCount;
+				labelCount++;
+				startLabel = "C"+labelCount;
+				labelCount++;
+				endLabel = "C"+labelCount;
+				endingLabels.push(labelCount);
+				labelCount++;
+				openingBlocks.add("while");
+				
+				t.setName("if");
+				
+				addNewLine(i, functionTokenList);
+				addSemicolon(i, functionTokenList);
+				addColon(i, functionTokenList);
+				
+				Token l11 = new Token(Tokentype.IDENTIFIER);
+				l11.setName("C"+loopLabel);
+				FunctionTokens ft11 = new FunctionTokens(l11);
+				functionTokenList.add(i,ft11);
+				i += 4;
+			}
+			if(t.getName().equals("{") && openingBlocks.size() > 0) {
+				t.setTokenType(Tokentype.RESERVED_WORD);
 				t.setName("goto ");
 				
 				i++;
@@ -179,7 +328,7 @@ public class IRProcessHandler {
 				functionTokenList.add(i,ft5);
 				
 				//For friggin indentation
-				for(int j = 0; j < ifFlag*2; j++) {
+				for(int j = 0; j < openingBlocks.size()*2; j++) {
 					addSpace(i,functionTokenList);
 				}
 				
@@ -193,13 +342,13 @@ public class IRProcessHandler {
 				functionTokenList.add(i,ft4);
 				
 				
-				Token i1 = new Token(Tokentype.IDENTIFIER);
+				Token i1 = new Token(Tokentype.RESERVED_WORD);
 				i1.setName("goto ");
 				FunctionTokens ft3 = new FunctionTokens(i1);
 				functionTokenList.add(i,ft3);
 				
 				//For friggin indentation
-				for(int j = 0; j < ifFlag*2; j++) {
+				for(int j = 0; j < openingBlocks.size()*2; j++) {
 					addSpace(i,functionTokenList);
 				}
 				
@@ -214,21 +363,37 @@ public class IRProcessHandler {
 				
 				i+=10;
 				//For friggin indentation
-				i+= (ifFlag*4);
+				i+= (openingBlocks.size()*4);
 			}
 			
-			if(t.getName().equals("}") && ifFlag > 0) {
-				ifFlag--;
+			if(t.getName().equals("}") && openingBlocks.size() > 0) {
+				String blockType = openingBlocks.pop();
+				
 				t.setTokenType(Tokentype.IDENTIFIER);
-				String eLabel = endingLabels.pop();
-				t.setName(eLabel);
+				int eLabel = endingLabels.pop();
+				t.setName("C"+eLabel);
+				
+				if(blockType.equals("while")) {
+					addNewLine(i, functionTokenList);
+					addSemicolon(i, functionTokenList);
+					
+					Token l1 = new Token(Tokentype.IDENTIFIER);
+					l1.setName("C"+(eLabel-2));
+					FunctionTokens ft = new FunctionTokens(l1);
+					functionTokenList.add(i,ft);
+					
+					Token i1 = new Token(Tokentype.RESERVED_WORD);
+					i1.setName("goto ");
+					FunctionTokens ft3 = new FunctionTokens(i1);
+					functionTokenList.add(i,ft3);
+					i += 4;
+				}
 				i++;
 				addSemicolon(i,functionTokenList);
 				addColon(i,functionTokenList);
 				i+=1;
 			}
-		}
-		
+		}	
 	}
 	
 	private void addColon(int i, List<FunctionTokens> functionTokenList) {
@@ -257,10 +422,13 @@ public class IRProcessHandler {
 		FunctionTokens ft = new FunctionTokens(t);
 		functionTokenList.add(i, ft);
 	}
-	private String getThreeAddressCodeExpression(ThreeAddressCode tac, int count) {
+	private String getThreeAddressCodeExpression(ThreeAddressCode tac, List<String> varList, Map<String, Integer> varMap) {
+		int count = varList.size();
 		StringBuilder x = new StringBuilder();
 		for(int i = 0; i < tac.localVariables.size(); i++) {
 			x.append("LOCAL["+(i+count)+"] = "+tac.localVariables.get(i)+";\n");
+			varList.add(tac.localVariables.get(i));
+			varMap.put(tac.localVariables.get(i), varList.size());
 		}
 		return x.toString();
 	}

@@ -24,7 +24,7 @@ int main(void)
     int idx, bound;
 
     populate_arrays();
-    
+
     idx = 0;
     bound = 8;
 

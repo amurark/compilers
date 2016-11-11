@@ -1,27 +1,33 @@
 #include <stdio.h>
 #define read(x) scanf("%d",&x)
 #define write(x) printf("%d\n",x)
+#define print(x) printf(x)
 
-int sub(int m, int n, int k);
-
-int add(int a, int c) {
-  int b;
-  if(a == 2) {
-    read(b);
-    if(c == 4) {
-    	print("b");
-    }
-  }
-  return a+b;
+int c()
+{
+    return 1;
 }
 
-int main(int x, int y) {
-  int a, b;
-  read(a);
-  if(x/2 >= 5) {
-    write(add(a));
-  }
-  if(x/3 == 9) {
-    read(x);
-  }
+int b()
+{
+    return 2;
+}
+
+int a()
+{
+    return 3;
+}
+
+int foo(int a, int b, int c)
+{
+    return (a*3 + b*2 + c);
+}
+
+int main()
+{
+    int val;
+    val = foo(a(), b(), c());
+
+    print("I calculate the answer to be: ");
+    write(val);
 }

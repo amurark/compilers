@@ -95,7 +95,9 @@ public class IRGenerator {
 							//System.out.print(this.exprList.get(i).get(j).getName());
 						}
 						//System.out.println();
-						ThreeAddressCode tac = new ThreeAddressCode(this.exprList.get(i),0);
+//						Map m = new HashMap<String, Integer>();
+//						List l = new ArrayList<String>();
+//						ThreeAddressCode tac = new ThreeAddressCode(this.exprList.get(i), l, m);//TEMP
 					}
 					for(int i = 0; i < this.ifList.size(); i++) {
 						for( int j = 0; j < this.ifList.get(i).size(); j++) {
@@ -103,6 +105,7 @@ public class IRGenerator {
 						}
 						//System.out.println();
 					}
+					iph.displayOutputTokens();
 				} else {
 					System.out.println("Error in parsing the program.");
 				}
@@ -274,6 +277,7 @@ public class IRGenerator {
 				} else {
 					if(word.equals("}")) {
 						iph.processFunction(this.localVariableCount, this.lVarList);
+						System.out.println("done processing function");
 						this.localVariableCount = 0;
 						this.funcFlag = false;
 						
@@ -368,6 +372,7 @@ public class IRGenerator {
 						if(word.equals("}")) {
 							//For IR
 							iph.processFunction(this.localVariableCount, this.lVarList);
+							System.out.println("done processing other functions..");
 							this.localVariableCount = 0;
 							this.funcFlag = false;
 							nextWord();
@@ -776,7 +781,7 @@ public class IRGenerator {
 		} else {
 			if(word.equals("(")) {
 				nextWord();
-				if(expr_list(false) == true) {
+				if(expr_list(false) == true) {//CHANGED
 					if(word.equals(")")) {
 						nextWord();
 						if(word.equals(";")) {
@@ -871,7 +876,7 @@ public class IRGenerator {
 			nextWord();
 			if(word.equals("(")) {
 				nextWord();
-				if(expr_list(false) == false) {
+				if(expr_list(true) == false) {
 					return false;
 				} else {
 					if(word.equals(")")) {
@@ -911,9 +916,11 @@ public class IRGenerator {
 	 * @return
 	 */
 	private boolean non_empty_expr_list(boolean factorFlag) {
+		System.out.println("hello1 "+word);
 		if(expression() == false) {
 			return false;
 		} else {
+			System.out.println("factor "+factorFlag);
 			if(factorFlag == true) {} else {
 				endExpression();
 			}
@@ -928,6 +935,7 @@ public class IRGenerator {
 	private boolean non_empty_expr_list_1(boolean factorFlag) {
 		if(word.equals(",")) {
 			nextWord();
+			System.out.println("hello "+word);
 			if(expression() == false) {
 				return false;
 			} else {
@@ -1201,9 +1209,8 @@ public class IRGenerator {
 	 */
 	private boolean expression() {
 		boolean ans = false;
-		startExpression();
 		
-		if(term() == false) {
+		if(term(true) == false) {
 			ans = false;
 		} else {
 			ans = expression_1();
@@ -1219,7 +1226,7 @@ public class IRGenerator {
 	 */
 	private boolean expression_1() {
 		if(addop() == true) {
-			if(term() == false) {
+			if(term(false) == false) {
 				return false;
 			} else {
 				return expression_1();
@@ -1249,8 +1256,8 @@ public class IRGenerator {
 	 * <term>
 	 * @return
 	 */
-	private boolean term() {
-		if(factor() == false) {
+	private boolean term(boolean expFlag) {
+		if(factor(expFlag) == false) {
 			return false;
 		} else {
 			if(term_1() == false) {
@@ -1267,7 +1274,7 @@ public class IRGenerator {
 	 */
 	private boolean term_1() {
 		if(mulop() == true) {
-			if(factor() == false) {
+			if(factor(false) == false) {
 				return false;
 			} else {
 				return term_1();
@@ -1297,14 +1304,23 @@ public class IRGenerator {
 	 * <factor>
 	 * @return
 	 */
-	private boolean factor() {
+	private boolean factor(boolean expFlag) {
 		if(type == Tokentype.IDENTIFIER) {
+			if(expFlag) {
+				startExpression();
+			}
 			nextWord();
 			return factor_1();
 		} else if(type == Tokentype.NUMBER) {
+			if(expFlag) {
+				startExpression();
+			}
 			nextWord();
 			return true;
 		} else if(word.equals("-")) {
+			if(expFlag) {
+				startExpression();
+			}
 			nextWord();
 			if(type == Tokentype.NUMBER) {
 				nextWord();
@@ -1313,6 +1329,9 @@ public class IRGenerator {
 				return false;
 			}
 		} else if(word.equals("(")) {
+			if(expFlag) {
+				startExpression();
+			}
 			nextWord();
 			if(expression() == false) {
 				return false;
@@ -1363,6 +1382,14 @@ public class IRGenerator {
 			return true;
 		}
 	}
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	private void startExpression() {
 		if(this.expressionFlag == false) {

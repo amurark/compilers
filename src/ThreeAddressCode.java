@@ -11,11 +11,13 @@ public class ThreeAddressCode {
 	Stack<Token> operatorStack = new Stack<Token>();
 	private List<Token> inputArray = new ArrayList<Token>();
 	private int varCount;
+	private Map<String, Integer> varMap;
 	
-	public ThreeAddressCode(List<Token> list, int varCount) {
+	public ThreeAddressCode(List<Token> list, List<String> varList, Map<String, Integer> varMap) {
 		this.inputArray = list;
 		this.initializeExpression();
-		this.varCount = varCount;
+		this.varCount = varList.size();
+		this.varMap = varMap;
 		iterateString();
 	}
 	
@@ -23,10 +25,10 @@ public class ThreeAddressCode {
 	 * Remove enclosing parenthesis, if any. Also handle unary operations
 	 */
 	private void initializeExpression() {
-		if(this.inputArray.get(0).getName().equals("(") && this.inputArray.get(this.inputArray.size()-1).getName().equals("(")) {
-			this.inputArray.remove(0);
-			this.inputArray.remove(this.inputArray.size()-1);
-		}
+//		if(this.inputArray.get(0).getName().equals("(") && this.inputArray.get(this.inputArray.size()-1).getName().equals("(")) {
+//			this.inputArray.remove(0);
+//			this.inputArray.remove(this.inputArray.size()-1);
+//		}
 		boolean unaryFlag = false;
 		for(int i = 0; i < this.inputArray.size(); i++){
 			if(this.inputArray.get(i).getName().equals("-")) {
@@ -69,16 +71,21 @@ public class ThreeAddressCode {
 	 */
 	private void iterateString() {
 		for(int i = 0; i < inputArray.size(); i++) {
-			evaluateToken(inputArray.get(i));
+			if(i < inputArray.size()-2) {
+				evaluateToken(inputArray.get(i), inputArray.get(i+1), inputArray.get(i+2));
+			} else {
+				evaluateToken(inputArray.get(i), null, null);
+			}
+			
 		}
-
 		while(!operatorStack.isEmpty()) {
 			evaluateExpression(operatorStack.pop(), valueStack.pop(), valueStack.pop());
 		}
-		//System.out.println("=======");
+		System.out.println("..... ");
 		for(int i = 0; i < valueStack.size(); i++) {
 			//System.out.println(valueStack.pop());
 		}
+		System.out.println("--");
 		for(int i = 0; i < localVariables.size(); i++) {
 			//System.out.println(localVariables.get(i));
 		}
@@ -89,7 +96,7 @@ public class ThreeAddressCode {
 	 * Take actions as per the current token type.
 	 * @param currentToken
 	 */
-	private void evaluateToken(Token currentToken) {
+	private void evaluateToken(Token currentToken, Token nextToken, Token nnextToken) {
 		String cToken = currentToken.getName();
 		if(cToken.equals("+") || cToken.equals("-") || cToken.equals("*") || cToken.equals("/")) {
 			while(!operatorStack.isEmpty() && hasPrecedence(cToken.charAt(0),operatorStack.peek().getName().charAt(0))) {
@@ -99,17 +106,62 @@ public class ThreeAddressCode {
 		} else if(cToken.equals("(")) {
 			operatorStack.push(currentToken);
 		} else if(cToken.equals(")")) {
-			while(!operatorStack.peek().getName().equals("(")) {
+			while(!operatorStack.isEmpty() && !operatorStack.peek().getName().equals("(")) {
 				evaluateExpression(operatorStack.pop(), valueStack.pop(), valueStack.pop());
 			}
-			operatorStack.pop();
+			if(!operatorStack.isEmpty()) {
+				operatorStack.pop();
+			}
+			/**
+			 * If the operator stack has identifier(function name)
+			 */
+			if(!operatorStack.isEmpty() && operatorStack.peek().getTokenType() == Tokentype.IDENTIFIER) {
+				int index = localVariables.size()+varCount;
+				if(!valueStack.isEmpty()) {
+					if(operatorStack.peek().getName().charAt(operatorStack.peek().getName().length()-1) == '|') {
+						String x = operatorStack.peek().getName().substring(0, operatorStack.peek().getName().length()-1);
+						localVariables.add(x+"()");
+						operatorStack.pop();
+					} else {
+						localVariables.add(operatorStack.pop().getName()+"("+valueStack.pop()+")");
+					}
+				}
+				else {
+					String x = operatorStack.peek().getName().substring(0, operatorStack.peek().getName().length()-1);
+					localVariables.add(x+"()");
+					operatorStack.pop();
+				}	
+				valueStack.push("LOCAL["+index+"]");
+			}
+			
 		} else {
 			if(currentToken.getTokenType() == Tokentype.NUMBER) {
 				valueStack.push(cToken);
 			} else if(currentToken.getTokenType() == Tokentype.IDENTIFIER) {
-				valueStack.push(cToken);
+				/**
+				 * If nextToken is a '('. Then this is a function name.
+				 */
+				if(nextToken != null && nextToken.getName().equals("(") && varMap.get(cToken) == null) {
+					if(nnextToken != null && nnextToken.getName().equals(")")) {
+						currentToken.setName(currentToken.getName()+"|");
+						operatorStack.push(currentToken);
+					} else {
+						operatorStack.push(currentToken);
+					}
+					
+				} else {
+					valueStack.push("LOCAL["+varMap.get(cToken)+"]");
+				}
+				//valueStack.push(cToken);
 			}
 		}
+//		System.out.println(".........");
+//		for(int i = 0; i < valueStack.size(); i++) {
+//			System.out.print(valueStack.pop()+" ");
+//		}
+//		for(int i = 0; i < operatorStack.size(); i++) {
+//			System.out.print(operatorStack.pop().getName()+" ");
+//		}
 	}
 	
 	/**
@@ -141,6 +193,8 @@ public class ThreeAddressCode {
     {
         if (op2 == '(' || op2 == ')')
             return false;
+        if (op2 != '+' && op2 != '-' && op2 != '*' && op2 != '/')
+        	return false;
         if ((op1 == '*' || op1 == '/') && (op2 == '+' || op2 == '-'))
             return false;
         else
