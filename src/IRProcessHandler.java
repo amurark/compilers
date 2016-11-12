@@ -24,12 +24,13 @@ public class IRProcessHandler {
 		if(currentToken.getName().equals("["))
 		{
 			Token lt = outputTokens.get(outputTokens.size()-1);
+			String name = lt.getName();
 			if(this.globalCount == 0) {
 				lt.setName("GLOBAL");
 			} else {
 				lt.setName("GLOBAL"+this.globalCount);
 			}
-			globalVars.put(lt.getName(), globalCount);
+			globalVars.put(name, globalCount);
 			this.globalCount++;
 			
 		}
@@ -38,20 +39,6 @@ public class IRProcessHandler {
 	public Integer getCurrentIndex() {
 		return outputTokens.size()-1;
 	}
-	
-//	public void handleExpressions(List<Token> expressionValue) {
-//		ThreeAddressCode tac = new ThreeAddressCode(expressionValue,0);
-//		Token t = new Token(Tokentype.IDENTIFIER);
-//		t.setName(tac.valueStack.pop());
-//		outputTokens.add(t);
-//		//System.out.println("=======");
-//		for(int i = 0; i < tac.valueStack.size(); i++) {
-//			//System.out.println(tac.valueStack.pop());
-//		}
-//		for(int i = 0; i < tac.localVariables.size(); i++) {
-//			//System.out.println(tac.localVariables.get(i));
-//		}
-//	}
 	
 	public void functionHandler(List<String> paramList, int paramCount, String funcName) {
 		this.paramCount = paramCount;
@@ -116,6 +103,11 @@ public class IRProcessHandler {
 			if(t.getTokenType() == Tokentype.IDENTIFIER) {
 				if(varMap.get(t.getName()) != null) {
 					t.setName("LOCAL["+varMap.get(t.getName())+"]");
+				} else if(globalVars.get(t.getName()) != null) {
+					if(globalVars.get(t.getName()) == 0)
+						t.setName("GLOBAL");
+					else
+						t.setName("GLOBAL"+globalVars.get(t.getName()));
 				}
 			} else if(t.getTokenType() == Tokentype.EXPRESSION) {
 				List<Token> expTokens = functionTokenList.get(i).getL();
@@ -138,7 +130,7 @@ public class IRProcessHandler {
 					}
 					
 					Map<String, Integer> funcCalls = evaluateFuncCalls(expTokens);
-					ThreeAddressCode tac = new ThreeAddressCode(expTokens, varList, varMap, funcCalls);
+					ThreeAddressCode tac = new ThreeAddressCode(expTokens, varList, varMap, funcCalls, globalVars);
 					String express = getThreeAddressCodeExpression(tac, varList, varMap);
 					if(express != null) {
 						functionTokenList.get(i).getT().setName(tac.valueStack.peek());
@@ -167,6 +159,11 @@ public class IRProcessHandler {
 						if(t1.getTokenType() == Tokentype.IDENTIFIER) {
 							if(varMap.get(t1.getName()) != null) {
 								t1.setName("LOCAL["+varMap.get(t1.getName())+"]");
+							} else if(globalVars.get(t1.getName()) != null) {
+								if(globalVars.get(t1.getName()) == 0)
+									t1.setName("GLOBAL");
+								else
+									t1.setName("GLOBAL"+globalVars.get(t1.getName()));
 							}
 						}
 						FunctionTokens ft = new FunctionTokens(t1);
@@ -486,6 +483,20 @@ public class IRProcessHandler {
 					int eLabel = endingLabels.peek();
 					int eLabel1 = endingLabels.get(endingLabels.size()-2);
 					t.setName("goto C"+eLabel1);
+				}
+				
+			}
+			
+			if(t.getName().equals("continue") && openingBlocks.size() > 0) {
+				String blockType = openingBlocks.peek();
+				t.setTokenType(Tokentype.RESERVED_WORD);
+				if(blockType.equals("while")) {
+					int eLabel = endingLabels.peek();
+					t.setName("goto C"+(eLabel-2));
+				} else {
+					int eLabel = endingLabels.peek();
+					int eLabel1 = endingLabels.get(endingLabels.size()-2);
+					t.setName("goto C"+(eLabel1-2));
 				}
 				
 			}

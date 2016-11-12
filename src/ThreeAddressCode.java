@@ -13,13 +13,15 @@ public class ThreeAddressCode {
 	private int varCount;
 	private Map<String, Integer> varMap;
 	private Map<String, Integer> funcCalls;
+	private Map<String, Integer> globalVars;
 	
-	public ThreeAddressCode(List<Token> list, List<String> varList, Map<String, Integer> varMap, Map<String, Integer> funcCalls) {
+	public ThreeAddressCode(List<Token> list, List<String> varList, Map<String, Integer> varMap, Map<String, Integer> funcCalls, Map<String, Integer> globalVars) {
 		this.inputArray = list;
 		this.initializeExpression();
 		this.varCount = varList.size();
 		this.varMap = varMap;
 		this.funcCalls = funcCalls;
+		this.globalVars = globalVars;
 		iterateString();
 	}
 	
@@ -78,7 +80,6 @@ public class ThreeAddressCode {
 			} else {
 				evaluateToken(inputArray.get(i), null, null);
 			}
-			
 		}
 		while(!operatorStack.isEmpty()) {
 			evaluateExpression(operatorStack.pop(), valueStack.pop(), valueStack.pop());
@@ -103,10 +104,10 @@ public class ThreeAddressCode {
 				evaluateExpression(operatorStack.pop(), valueStack.pop(), valueStack.pop());
 			}
 			operatorStack.push(currentToken);
-		} else if(cToken.equals("(")) {
+		} else if(cToken.equals("(") || cToken.equals("[")) {
 			operatorStack.push(currentToken);
-		} else if(cToken.equals(")")) {
-			while(!operatorStack.isEmpty() && !operatorStack.peek().getName().equals("(")) {
+		} else if(cToken.equals(")") || cToken.equals("]")) {
+			while(!operatorStack.isEmpty() && (!operatorStack.peek().getName().equals("(") && !operatorStack.peek().getName().equals("["))) {
 				evaluateExpression(operatorStack.pop(), valueStack.pop(), valueStack.pop());
 			}
 			if(!operatorStack.isEmpty()) {
@@ -124,6 +125,7 @@ public class ThreeAddressCode {
 						localVariables.add(x+"()");
 						operatorStack.pop();
 					} else {
+						//If its for a function call
 						if(funcCalls.get(operatorStack.peek().getName()) != null) {
 							int pCount = funcCalls.get(operatorStack.peek().getName());
 							StringBuilder sb = new StringBuilder();
@@ -136,6 +138,18 @@ public class ThreeAddressCode {
 							} else {
 								localVariables.add(operatorStack.pop().getName()+"()");
 							}
+						}
+						//If its for an array
+						if(cToken.equals("]")) {
+							if(globalVars.get(operatorStack.peek().getName()) != null) {
+								int cnt = globalVars.get(operatorStack.pop().getName());
+								if(cnt == 0)
+									localVariables.add("GLOBAL"+"["+valueStack.pop()+"]");
+								else
+									localVariables.add("GLOBAL"+cnt+"["+valueStack.pop()+"]");
+							} else {
+								localVariables.add(operatorStack.pop().getName()+"["+valueStack.pop()+"]");
+							}
 							
 						}
 						//localVariables.add(operatorStack.pop().getName()+"("+valueStack.pop()+")");
@@ -145,10 +159,9 @@ public class ThreeAddressCode {
 					String x = operatorStack.peek().getName().substring(0, operatorStack.peek().getName().length()-1);
 					localVariables.add(x+"()");
 					operatorStack.pop();
-				}	
+				}
 				valueStack.push("LOCAL["+index+"]");
 			}
-			
 		} else {
 			if(currentToken.getTokenType() == Tokentype.NUMBER) {
 				valueStack.push(cToken);
@@ -156,8 +169,8 @@ public class ThreeAddressCode {
 				/**
 				 * If nextToken is a '('. Then this is a function name.
 				 */
-				if(nextToken != null && nextToken.getName().equals("(") && varMap.get(cToken) == null) {
-					if(nnextToken != null && nnextToken.getName().equals(")")) {
+				if(nextToken != null && (nextToken.getName().equals("(") || nextToken.getName().equals("[")) && varMap.get(cToken) == null) {
+					if(nnextToken != null && (nnextToken.getName().equals(")") || nnextToken.getName().equals("]"))) {
 						currentToken.setName(currentToken.getName()+"|");
 						operatorStack.push(currentToken);
 					} else {
