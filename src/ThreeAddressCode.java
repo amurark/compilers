@@ -12,12 +12,14 @@ public class ThreeAddressCode {
 	private List<Token> inputArray = new ArrayList<Token>();
 	private int varCount;
 	private Map<String, Integer> varMap;
+	private Map<String, Integer> funcCalls;
 	
-	public ThreeAddressCode(List<Token> list, List<String> varList, Map<String, Integer> varMap) {
+	public ThreeAddressCode(List<Token> list, List<String> varList, Map<String, Integer> varMap, Map<String, Integer> funcCalls) {
 		this.inputArray = list;
 		this.initializeExpression();
 		this.varCount = varList.size();
 		this.varMap = varMap;
+		this.funcCalls = funcCalls;
 		iterateString();
 	}
 	
@@ -81,11 +83,9 @@ public class ThreeAddressCode {
 		while(!operatorStack.isEmpty()) {
 			evaluateExpression(operatorStack.pop(), valueStack.pop(), valueStack.pop());
 		}
-		System.out.println("..... ");
 		for(int i = 0; i < valueStack.size(); i++) {
 			//System.out.println(valueStack.pop());
 		}
-		System.out.println("--");
 		for(int i = 0; i < localVariables.size(); i++) {
 			//System.out.println(localVariables.get(i));
 		}
@@ -113,6 +113,7 @@ public class ThreeAddressCode {
 				operatorStack.pop();
 			}
 			/**
+			 * Create the function call in the expression
 			 * If the operator stack has identifier(function name)
 			 */
 			if(!operatorStack.isEmpty() && operatorStack.peek().getTokenType() == Tokentype.IDENTIFIER) {
@@ -123,7 +124,21 @@ public class ThreeAddressCode {
 						localVariables.add(x+"()");
 						operatorStack.pop();
 					} else {
-						localVariables.add(operatorStack.pop().getName()+"("+valueStack.pop()+")");
+						if(funcCalls.get(operatorStack.peek().getName()) != null) {
+							int pCount = funcCalls.get(operatorStack.peek().getName());
+							StringBuilder sb = new StringBuilder();
+							for(int l = 0; l < pCount; l++) {
+								sb.insert(0, valueStack.pop());
+								sb.insert(0, ",");
+							}
+							if(sb.length() > 0) {
+								localVariables.add(operatorStack.pop().getName()+"("+sb.subSequence(1, sb.length()).toString()+")");
+							} else {
+								localVariables.add(operatorStack.pop().getName()+"()");
+							}
+							
+						}
+						//localVariables.add(operatorStack.pop().getName()+"("+valueStack.pop()+")");
 					}
 				}
 				else {

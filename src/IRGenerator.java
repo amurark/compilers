@@ -241,7 +241,7 @@ public class IRGenerator {
 		} else if(word.equals("[")) {
 			nextWord();
 			varCount++;
-			if(expression() == false) {
+			if(expression(false) == false) {
 				return false;
 			} else {
 				if(word.equals("]")) {
@@ -616,7 +616,7 @@ public class IRGenerator {
 	private boolean id_1() {
 		if(word.equals("[")) {
 			nextWord();
-			if(expression() == false) {
+			if(expression(true) == false) {
 				return false;
 			} else {
 				endExpression();
@@ -723,7 +723,7 @@ public class IRGenerator {
 			nextWord();
 			if(word.equals("(")) {
 				nextWord();
-				if(expression() == false) {
+				if(expression(true) == false) {
 					return false;
 				} else {
 					endExpression();
@@ -823,7 +823,7 @@ public class IRGenerator {
 	private boolean assignment_1() {
 		if(word.equals("=")) {
 			nextWord();
-			if(expression() == false) {
+			if(expression(true) == false) {
 				return false;
 			} else {
 				endExpression();
@@ -836,7 +836,7 @@ public class IRGenerator {
 			}
 		} else if(word.equals("[")) {
 			nextWord();
-			if(expression() == false) {
+			if(expression(true) == false) {
 				return false;
 			} else {
 				endExpression();
@@ -844,7 +844,7 @@ public class IRGenerator {
 					nextWord();
 					if(word.equals("=")) {
 						nextWord();
-						if(expression() == false) {
+						if(expression(true) == false) {
 							return false;
 						} else {
 							endExpression();
@@ -916,11 +916,9 @@ public class IRGenerator {
 	 * @return
 	 */
 	private boolean non_empty_expr_list(boolean factorFlag) {
-		System.out.println("hello1 "+word);
-		if(expression() == false) {
+		if(expression(true) == false) {
 			return false;
 		} else {
-			System.out.println("factor "+factorFlag);
 			if(factorFlag == true) {} else {
 				endExpression();
 			}
@@ -935,8 +933,7 @@ public class IRGenerator {
 	private boolean non_empty_expr_list_1(boolean factorFlag) {
 		if(word.equals(",")) {
 			nextWord();
-			System.out.println("hello "+word);
-			if(expression() == false) {
+			if(expression(true) == false) {
 				return false;
 			} else {
 				if(factorFlag == true) {} else {
@@ -1042,14 +1039,14 @@ public class IRGenerator {
 	 * @return
 	 */
 	private boolean condition() {
-		if(expression() == false) {
+		if(expression(true) == false) {
 			return false;
 		} else {
 			endExpression();
 			if(comparison_op() == false) {
 				return false;
 			} else {
-				if(expression() == false) {
+				if(expression(true) == false) {
 					return false;
 				} else {
 					endExpression();
@@ -1153,7 +1150,7 @@ public class IRGenerator {
 			nextWord();
 			return true;
 		} else {
-			if(expression() == false) {
+			if(expression(true) == false) {
 				return false;
 			} else {
 				endExpression();
@@ -1207,10 +1204,10 @@ public class IRGenerator {
 	 * <expression>
 	 * @return
 	 */
-	private boolean expression() {
+	private boolean expression(boolean expFlag) {
 		boolean ans = false;
 		
-		if(term(true) == false) {
+		if(term(expFlag) == false) {
 			ans = false;
 		} else {
 			ans = expression_1();
@@ -1333,7 +1330,7 @@ public class IRGenerator {
 				startExpression();
 			}
 			nextWord();
-			if(expression() == false) {
+			if(expression(true) == false) {
 				return false;
 			} else {
 				if(word.equals(")")) {
@@ -1356,7 +1353,7 @@ public class IRGenerator {
 	private boolean factor_1() {
 		if(word.equals("[")) {
 			nextWord();
-			if(expression() == false) {
+			if(expression(true) == false) {
 				return false;
 			} else {
 				if(word.equals("]")) {

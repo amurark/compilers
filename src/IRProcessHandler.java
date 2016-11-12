@@ -14,10 +14,25 @@ public class IRProcessHandler {
 	int localVarCount;
 	String funcName;
 	
+	int globalCount = 0;
+	Map<String, Integer> globalVars = new HashMap<String, Integer>();
+	
 	int labelCount = 1;
 	
 	public IRProcessHandler() {}
 	public void addToOutputList(Token currentToken) {
+		if(currentToken.getName().equals("["))
+		{
+			Token lt = outputTokens.get(outputTokens.size()-1);
+			if(this.globalCount == 0) {
+				lt.setName("GLOBAL");
+			} else {
+				lt.setName("GLOBAL"+this.globalCount);
+			}
+			globalVars.put(lt.getName(), globalCount);
+			this.globalCount++;
+			
+		}
 		this.outputTokens.add(currentToken);
 	}
 	public Integer getCurrentIndex() {
@@ -117,7 +132,13 @@ public class IRProcessHandler {
 				 * If the expression is not a single identifier and is actually an arithmetic expression
 				 */
 				if(count > 1) {
-					ThreeAddressCode tac = new ThreeAddressCode(expTokens, varList, varMap);
+					//System.out.println("qwertt");
+					for(int m = 0; m < expTokens.size(); m++) {
+						//System.out.print(expTokens.get(m).getName());
+					}
+					
+					Map<String, Integer> funcCalls = evaluateFuncCalls(expTokens);
+					ThreeAddressCode tac = new ThreeAddressCode(expTokens, varList, varMap, funcCalls);
 					String express = getThreeAddressCodeExpression(tac, varList, varMap);
 					if(express != null) {
 						functionTokenList.get(i).getT().setName(tac.valueStack.peek());
@@ -126,7 +147,7 @@ public class IRProcessHandler {
 						et.setName(express);
 						FunctionTokens eft = new FunctionTokens(et);
 						int k = i-1;
-						while(!(functionTokenList.get(k).getT().getTokenType() == Tokentype.DELIMITER && functionTokenList.get(k).getT().getName().equals("\n"))) {
+						while(k >= 0 && !(functionTokenList.get(k).getT().getTokenType() == Tokentype.DELIMITER && functionTokenList.get(k).getT().getName().equals("\n"))) {
 							k -= 1;
 						}
 						++k;
@@ -160,6 +181,7 @@ public class IRProcessHandler {
 //		functionTokenList.add(new FunctionTokens(closeBrace));
 		processIfStatements();
 		processDataDeclarations(varList.size(), lVarList);
+		processBinaryAndDecimalDataDeclarations(varList.size(), lVarList);
 		for(int i = 0; i < functionTokenList.size(); i++) {
 			if(functionTokenList.get(i).getT().getTokenType() != Tokentype.EXPRESSION) {
 				outputTokens.add(functionTokenList.get(i).getT());
@@ -177,10 +199,98 @@ public class IRProcessHandler {
 		//System.out.println("=================");
 	}
 	
+	
+	private Map<String, Integer> evaluateFuncCalls(List<Token> expTokens) {
+//		System.out.println("hello there ");
+//		for(int i = 0; i <  expTokens.size(); i++) {
+//			System.out.print(expTokens.get(i).getName());
+//		}
+		System.out.println();
+		Map<String, Integer> funcCalls = new HashMap<String, Integer>();
+		Stack<Token> tokenStack = new Stack<Token>();
+		int commaCount = 0;
+		for(int j = 0; j < expTokens.size(); j ++) {
+			Token t = expTokens.get(j);
+			//System.out.println("why1 "+expTokens.get(j).getName());
+			if(t.getTokenType() == Tokentype.IDENTIFIER && j <= expTokens.size()-2 && expTokens.get(j+1).getName().equals("(")) {//CHECK j<=
+				funcCalls.put(t.getName(), 0);
+				tokenStack.push(t);
+				tokenStack.push(expTokens.get(j+1));
+				j++;
+			} else {
+				//System.out.println("why "+expTokens.get(j).getName());
+				if(!tokenStack.isEmpty()) {
+					if(t.getName().equals(")")) {
+						Token t1 = tokenStack.pop();
+						if(t1.getName().equals("(")) {
+							Token id = tokenStack.pop();
+							if(id.getTokenType() == Tokentype.IDENTIFIER) {
+								if(funcCalls.get(id.getName()) != null ) {
+									funcCalls.put(id.getName(), 0);
+								}
+								commaCount = 0;
+							}
+						} else {
+							/**
+							 * Otherwise get the comma count,
+							 */
+							while(!t1.getName().equals("(")) {
+								if(t1.getName().equals(",")) {
+									commaCount++;
+								}
+								t1 = tokenStack.pop();
+							}
+							Token id = tokenStack.pop();
+							if(id.getTokenType() == Tokentype.IDENTIFIER) {
+								if(funcCalls.get(id.getName()) != null ) {
+									if(commaCount == 0)
+										funcCalls.put(id.getName(), 1);
+									else
+										funcCalls.put(id.getName(), commaCount+1);
+									commaCount = 0;
+								}
+							}
+						}
+						
+					} else {
+						tokenStack.push(t);
+					}
+				}
+			}
+		}
+		return funcCalls;
+	}
 	public void displayOutputTokens() {
 		for(int i = 0; i < outputTokens.size(); i++) {
 			System.out.print(outputTokens.get(i).getName());
 		}
+	}
+	
+	/**
+	 * Handle declarations for binary and decimal
+	 * @param size
+	 * @param lVarList2
+	 */
+	private void processBinaryAndDecimalDataDeclarations(int size, List<String> lVarList2) {
+		boolean declFlag = false;
+		List<FunctionTokens> ftl = new ArrayList<FunctionTokens>();
+		/**
+		 * Get the index for the 'binary' keyword and the endIndex where the declaration statement ends.
+		 */
+		for(int i = 0; i < functionTokenList.size(); i++) {
+			Token t = functionTokenList.get(i).getT();
+			if(t.getName().equals("binary") || t.getName().equals("decimal")) {
+				declFlag = true;
+			}
+			if(declFlag) {
+				if(t.getName().equals("\n")) {
+					declFlag = false;
+				}
+			} else {
+				ftl.add(functionTokenList.get(i));
+			}
+		}
+		functionTokenList = ftl;
 	}
 	
 	private void processDataDeclarations(int varCount, List<String> lVarList) {
@@ -364,6 +474,20 @@ public class IRProcessHandler {
 				i+=10;
 				//For friggin indentation
 				i+= (openingBlocks.size()*4);
+			}
+			
+			if(t.getName().equals("break") && openingBlocks.size() > 0) {
+				String blockType = openingBlocks.peek();
+				t.setTokenType(Tokentype.RESERVED_WORD);
+				if(blockType.equals("while")) {
+					int eLabel = endingLabels.peek();
+					t.setName("goto C"+eLabel);
+				} else {
+					int eLabel = endingLabels.peek();
+					int eLabel1 = endingLabels.get(endingLabels.size()-2);
+					t.setName("goto C"+eLabel1);
+				}
+				
 			}
 			
 			if(t.getName().equals("}") && openingBlocks.size() > 0) {
