@@ -1,3 +1,5 @@
+import java.io.IOException;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -20,6 +22,11 @@ public class IRProcessHandler {
 	int labelCount = 1;
 	
 	public IRProcessHandler() {}
+	/**
+	 * This stores all tokens other than function tokens in a list.
+	 * Also handles global declarations.
+	 * @param currentToken
+	 */
 	public void addToOutputList(Token currentToken) {
 		if(currentToken.getName().equals("["))
 		{
@@ -36,10 +43,21 @@ public class IRProcessHandler {
 		}
 		this.outputTokens.add(currentToken);
 	}
+	
+	/**
+	 * Get the current index for the output List.
+	 * @return
+	 */
 	public Integer getCurrentIndex() {
 		return outputTokens.size()-1;
 	}
 	
+	/**
+	 * Stores local variable count, current function name and function Token list.
+	 * @param paramList
+	 * @param paramCount
+	 * @param funcName
+	 */
 	public void functionHandler(List<String> paramList, int paramCount, String funcName) {
 		this.paramCount = paramCount;
 		this.paramList = paramList;
@@ -47,28 +65,12 @@ public class IRProcessHandler {
 		this.functionTokenList = new ArrayList<FunctionTokens>();
 	}
 	
-	//Called when a function ends
+	/**
+	 * Process the function tokens, record local variable count. Replace all variables with the corresponding LOCAL.
+	 * @param localVarCount
+	 * @param lVarList
+	 */
 	public void processFunction(int localVarCount, List<String> lVarList) {
-//		System.out.println("\nFunction Name: "+this.funcName);
-//		System.out.println("Param Count: "+this.paramCount);
-//		System.out.println("Local Variable Count: "+localVarCount);
-//		System.out.println("Params are:");
-		for(int i = 0; i < paramList.size(); i++) {
-			//System.out.print(paramList.get(i));
-		}
-		//System.out.println("\nLocal Variables are:");
-		for(int i = 0; i < lVarList.size(); i++) {
-			//System.out.print(lVarList.get(i));
-		}
-		//System.out.println("\nFunc is: ");
-		for(int i = 0; i < functionTokenList.size(); i++) {
-			//System.out.print(functionTokenList.get(i).getT().getName());
-			if(functionTokenList.get(i).getT().getTokenType() == Tokentype.EXPRESSION) {
-				//System.out.print("(expr)");
-			}
-		}
-		//System.out.println("done");
-		
 		/**
 		 * List of variables in the function, including the parameters and also the 3 address expressions.
 		 */
@@ -97,7 +99,7 @@ public class IRProcessHandler {
 		 * Count of total variables including intermediate 3AC expressions
 		 */
 		int varCount = varList.size();
-		//functionTokenList is of type functionToken
+		
 		for(int i = 0; i < functionTokenList.size(); i++) {
 			Token t = functionTokenList.get(i).getT();
 			if(t.getTokenType() == Tokentype.IDENTIFIER) {
@@ -121,14 +123,10 @@ public class IRProcessHandler {
 					}
 				}
 				/**
-				 * If the expression is not a single identifier and is actually an arithmetic expression
+				 * If the expression is not a single identifier and is actually an arithmetic expression.
+				 * Else if the expression is an identifier, replace it with a corresponding LOCAL variable.
 				 */
 				if(count > 1) {
-					//System.out.println("qwertt");
-					for(int m = 0; m < expTokens.size(); m++) {
-						//System.out.print(expTokens.get(m).getName());
-					}
-					
 					Map<String, Integer> funcCalls = evaluateFuncCalls(expTokens);
 					ThreeAddressCode tac = new ThreeAddressCode(expTokens, varList, varMap, funcCalls, globalVars);
 					String express = getThreeAddressCodeExpression(tac, varList, varMap);
@@ -139,11 +137,14 @@ public class IRProcessHandler {
 						et.setName(express);
 						FunctionTokens eft = new FunctionTokens(et);
 						int k = i-1;
+						/**
+						 * Insert the preceding variable assignments required to change an expression to a three address code form 
+						 */
 						while(k >= 0 && !(functionTokenList.get(k).getT().getTokenType() == Tokentype.DELIMITER && functionTokenList.get(k).getT().getName().equals("\n"))) {
 							k -= 1;
 						}
 						++k;
-						//This friggin while is to indent the expression. 
+						//This while loop is to indent the expression. 
 						int k1 = k;
 						while(functionTokenList.get(k1).getT().getTokenType() == Tokentype.DELIMITER && functionTokenList.get(k1).getT().getName().equals(" ")) {
 							eft.getT().setName(" "+eft.getT().getName());
@@ -172,50 +173,43 @@ public class IRProcessHandler {
 				}
 			}
 		}
-		//THIS WAS GIVING DOUBLE CLOSING BRACE FOR FUNCTIONS
-//		Token closeBrace = new Token(Tokentype.SYMBOL);
-//		closeBrace.setName("}");
-//		functionTokenList.add(new FunctionTokens(closeBrace));
+		
+		/**
+		 * Process all IF Blocks within a function
+		 */
 		processIfStatements();
+		/**
+		 * Process all int data declarations within an array
+		 */
 		processDataDeclarations(varList.size(), lVarList);
+		/**
+		 * Process Binary and Decimal data declarations.
+		 */
 		processBinaryAndDecimalDataDeclarations(varList.size(), lVarList);
 		for(int i = 0; i < functionTokenList.size(); i++) {
 			if(functionTokenList.get(i).getT().getTokenType() != Tokentype.EXPRESSION) {
 				outputTokens.add(functionTokenList.get(i).getT());
 			}
 		}
-		
-		System.out.println("\nFunc after conversion is: ");
-		
-		//System.out.println("*****************");
-		for(int i = 0; i < functionTokenList.size(); i++) {
-			if(functionTokenList.get(i).getT().getTokenType() != Tokentype.EXPRESSION) {
-				//System.out.print(functionTokenList.get(i).getT().getName());
-			}
-		}
-		//System.out.println("=================");
 	}
 	
-	
+	/**
+	 * Evaluate all function calls which is a part of 3 address code 
+	 * @param expTokens
+	 * @return
+	 */
 	private Map<String, Integer> evaluateFuncCalls(List<Token> expTokens) {
-//		System.out.println("hello there ");
-//		for(int i = 0; i <  expTokens.size(); i++) {
-//			System.out.print(expTokens.get(i).getName());
-//		}
-		System.out.println();
 		Map<String, Integer> funcCalls = new HashMap<String, Integer>();
 		Stack<Token> tokenStack = new Stack<Token>();
 		int commaCount = 0;
 		for(int j = 0; j < expTokens.size(); j ++) {
 			Token t = expTokens.get(j);
-			//System.out.println("why1 "+expTokens.get(j).getName());
 			if(t.getTokenType() == Tokentype.IDENTIFIER && j <= expTokens.size()-2 && expTokens.get(j+1).getName().equals("(")) {//CHECK j<=
 				funcCalls.put(t.getName(), 0);
 				tokenStack.push(t);
 				tokenStack.push(expTokens.get(j+1));
 				j++;
 			} else {
-				//System.out.println("why "+expTokens.get(j).getName());
 				if(!tokenStack.isEmpty()) {
 					if(t.getName().equals(")")) {
 						Token t1 = tokenStack.pop();
@@ -257,10 +251,21 @@ public class IRProcessHandler {
 		}
 		return funcCalls;
 	}
-	public void displayOutputTokens() {
+	/**
+	 * Display output tokens and write it to the <name>_gen.c file.
+	 * @param writer
+	 */
+	public void displayOutputTokens(Writer writer) {
 		for(int i = 0; i < outputTokens.size(); i++) {
 			System.out.print(outputTokens.get(i).getName());
+			try {
+				writer.write(outputTokens.get(i).getName());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
+		
 	}
 	
 	/**
@@ -290,6 +295,11 @@ public class IRProcessHandler {
 		functionTokenList = ftl;
 	}
 	
+	/**
+	 * Process all data declarations within a function.
+	 * @param varCount
+	 * @param lVarList
+	 */
 	private void processDataDeclarations(int varCount, List<String> lVarList) {
 		boolean declFlag = false;
 		int startIndex = 0, endIndex = 0;
@@ -384,6 +394,9 @@ public class IRProcessHandler {
 			functionTokenList.add(startIndex+place, ft1);
 		}
 	}
+	/**
+	 * Process all 'if' and 'while' blocks and replace it with GOTOs and labels.
+	 */
 	private void processIfStatements() {
 		Stack<Integer> endingLabels = new Stack<Integer>();
 		Stack<String> openingBlocks = new Stack<String>();
@@ -434,7 +447,7 @@ public class IRProcessHandler {
 				FunctionTokens ft5 = new FunctionTokens(l2);
 				functionTokenList.add(i,ft5);
 				
-				//For friggin indentation
+				//For indentation
 				for(int j = 0; j < openingBlocks.size()*2; j++) {
 					addSpace(i,functionTokenList);
 				}
@@ -454,7 +467,7 @@ public class IRProcessHandler {
 				FunctionTokens ft3 = new FunctionTokens(i1);
 				functionTokenList.add(i,ft3);
 				
-				//For friggin indentation
+				//For indentation
 				for(int j = 0; j < openingBlocks.size()*2; j++) {
 					addSpace(i,functionTokenList);
 				}
@@ -469,7 +482,7 @@ public class IRProcessHandler {
 				functionTokenList.add(i,ft1);
 				
 				i+=10;
-				//For friggin indentation
+				//For indentation
 				i+= (openingBlocks.size()*4);
 			}
 			
@@ -531,6 +544,11 @@ public class IRProcessHandler {
 		}	
 	}
 	
+	/**
+	 * Add a colon for GOTO labels.
+	 * @param i
+	 * @param functionTokenList
+	 */
 	private void addColon(int i, List<FunctionTokens> functionTokenList) {
 		Token t = new Token(Tokentype.SYMBOL);
 		t.setName(":");
@@ -538,6 +556,11 @@ public class IRProcessHandler {
 		functionTokenList.add(i, ft);
 	}
 	
+	/**
+	 * Add a semicolon for GOTO statements.
+	 * @param i
+	 * @param functionTokenList
+	 */
 	private void addSemicolon(int i, List<FunctionTokens> functionTokenList) {
 		Token t = new Token(Tokentype.SYMBOL);
 		t.setName(";");
@@ -545,18 +568,37 @@ public class IRProcessHandler {
 		functionTokenList.add(i, ft);
 	}
 	
+	/**
+	 * Add space(DELIMITER) where required
+	 * @param i
+	 * @param functionTokenList
+	 */
 	private void addSpace(int i, List<FunctionTokens> functionTokenList) {
 		Token t = new Token(Tokentype.DELIMITER);
 		t.setName(" ");
 		FunctionTokens ft = new FunctionTokens(t);
 		functionTokenList.add(i, ft);
 	}
+	
+	/**
+	 * Add a new line(DELIMITER) where required
+	 * @param i
+	 * @param functionTokenList
+	 */
 	private void addNewLine(int i, List<FunctionTokens> functionTokenList) {
 		Token t = new Token(Tokentype.DELIMITER);
 		t.setName("\n");
 		FunctionTokens ft = new FunctionTokens(t);
 		functionTokenList.add(i, ft);
 	}
+	
+	/**
+	 * Get three address code format for all expressions.
+	 * @param tac
+	 * @param varList
+	 * @param varMap
+	 * @return
+	 */
 	private String getThreeAddressCodeExpression(ThreeAddressCode tac, List<String> varList, Map<String, Integer> varMap) {
 		int count = varList.size();
 		StringBuilder x = new StringBuilder();
@@ -567,6 +609,11 @@ public class IRProcessHandler {
 		}
 		return x.toString();
 	}
+	
+	/**
+	 * Add tokens to function token list.
+	 * @param ft
+	 */
 	public void addToFunctionTokenList(FunctionTokens ft) {
 		this.functionTokenList.add(ft);
 	}

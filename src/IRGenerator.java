@@ -1,3 +1,4 @@
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,6 +32,7 @@ public class IRGenerator {
 	
 	/**
 	 * For IR
+	 * Capture expressions
 	 */
 	private boolean expressionFlag = false;
 	private List<Token> expressionValue = new ArrayList<Token>();
@@ -38,6 +40,7 @@ public class IRGenerator {
 	
 	/**
 	 * For IR
+	 * Capture 'if' blocks
 	 */
 	private int ifFlag = 0;
 	private List<Token> ifValue = new ArrayList<Token>();
@@ -45,6 +48,7 @@ public class IRGenerator {
 	
 	/**
 	 * For IR
+	 * Capture functions
 	 */
 	private boolean funcDeclFlag = false;
 	private boolean funcFlag = false;
@@ -54,14 +58,20 @@ public class IRGenerator {
 	private int localVariableCount = 0;
 	private List<String> lVarList = new ArrayList<String>();
 	
+	/**
+	 * Write to output file.
+	 */
+	private Writer writer;
+	
 	
 	/**
 	 * Get the scanner object.
 	 * @param scanner
 	 */
-	public IRGenerator(Scanner scanner) {
+	public IRGenerator(Scanner scanner, Writer writer) {
 		this.scanner = scanner;
 		this.iph = new IRProcessHandler();
+		this.writer = writer;
 	}
 	
 	/**
@@ -88,24 +98,7 @@ public class IRGenerator {
 				System.out.println("Error in parsing the program.");
 			} else {
 				if(x) {
-					System.out.println("Pass. variable "+varCount+" function "+funcCount+" statement "+statementCount);
-					
-					for(int i = 0; i < this.exprList.size(); i++) {
-						for(int j = 0; j < this.exprList.get(i).size(); j++) {
-							//System.out.print(this.exprList.get(i).get(j).getName());
-						}
-						//System.out.println();
-//						Map m = new HashMap<String, Integer>();
-//						List l = new ArrayList<String>();
-//						ThreeAddressCode tac = new ThreeAddressCode(this.exprList.get(i), l, m);//TEMP
-					}
-					for(int i = 0; i < this.ifList.size(); i++) {
-						for( int j = 0; j < this.ifList.get(i).size(); j++) {
-							//System.out.print(this.ifList.get(i).get(j).getName());
-						}
-						//System.out.println();
-					}
-					iph.displayOutputTokens();
+					iph.displayOutputTokens(writer);
 				} else {
 					System.out.println("Error in parsing the program.");
 				}
@@ -154,7 +147,6 @@ public class IRGenerator {
 			 * Initialize currentToken's type
 			 */
 			this.type = this.currentToken.getTokenType();
-			//System.out.println(this.type+" "+this.word);
 			/**
 			 * If the current token is a META_STATEMENT or a delimiter then skip it and read the next token.
 			 */
@@ -277,7 +269,6 @@ public class IRGenerator {
 				} else {
 					if(word.equals("}")) {
 						iph.processFunction(this.localVariableCount, this.lVarList);
-						System.out.println("done processing function");
 						this.localVariableCount = 0;
 						this.funcFlag = false;
 						
@@ -372,7 +363,6 @@ public class IRGenerator {
 						if(word.equals("}")) {
 							//For IR
 							iph.processFunction(this.localVariableCount, this.lVarList);
-							System.out.println("done processing other functions..");
 							this.localVariableCount = 0;
 							this.funcFlag = false;
 							nextWord();
@@ -1387,7 +1377,9 @@ public class IRGenerator {
 	
 	
 	
-	
+	/**
+	 * To capture start of an expression
+	 */
 	private void startExpression() {
 		if(this.expressionFlag == false) {
 			this.expressionFlag = true;
@@ -1395,6 +1387,9 @@ public class IRGenerator {
 		}
 	}
 	
+	/**
+	 * To capture end of an expression
+	 */
 	private void endExpression() {
 		if(!this.expressionValue.isEmpty()) {
 			this.expressionValue.remove(this.expressionValue.size()-1);
@@ -1416,10 +1411,18 @@ public class IRGenerator {
 		this.expressionFlag = false;
 	}
 	
+	/**
+	 * Capture expressions as list of tokens
+	 * @param token
+	 */
 	private void makeExpression(Token token) {
 		this.expressionValue.add(token);
 	}
 	
+	/**
+	 * Capture ifBLock as a list of tokens.
+	 * @param t
+	 */
 	private void makeIfBlock(Token t) {
 		this.ifValue.add(t);
 	}

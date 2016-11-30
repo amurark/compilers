@@ -80,11 +80,36 @@ public class Compiler {
 					System.exit(0);
 				}
 				
-				IRGenerator ir = new IRGenerator(sc);
+				
+				
+				
+				
 				/**
-				 * Initialize parser.
+				 * Split the input file from the period(.) symbol to create the modified name for the output file.
 				 */
-				ir.initialize();
+				String inputFilename = filename.split("\\.")[0];
+				/**
+				 * Create a buffered writer to write to the output file.
+				 */
+				try (Writer writer = new BufferedWriter(new OutputStreamWriter(
+					new FileOutputStream("./"+inputFilename+"_gen.c"), "utf-8"))) {
+					
+					IRGenerator ir = new IRGenerator(sc, writer);
+					/**
+					 * Initialize parser.
+					 */
+					ir.initialize();
+				} catch (IOException ex) {
+					  System.out.println("Error in writing to file "+ex);
+				} 
+				
+				
+				
+				
+				
+				
+				
+				
 			} else if(param2.equals("3")) {
 				/**
 				 * Split the input file from the period(.) symbol to create the modified name for the output file.

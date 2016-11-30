@@ -4,6 +4,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
+/**
+ * Get three address code format for expressions.
+ * @author Ankit
+ *
+ */
 public class ThreeAddressCode {
 	
 	List<String> localVariables = new ArrayList<String>();
@@ -15,6 +20,14 @@ public class ThreeAddressCode {
 	private Map<String, Integer> funcCalls;
 	private Map<String, Integer> globalVars;
 	
+	/**
+	 * Capture the list of tokens, variables, funcCalls and globalVariables.
+	 * @param list
+	 * @param varList
+	 * @param varMap
+	 * @param funcCalls
+	 * @param globalVars
+	 */
 	public ThreeAddressCode(List<Token> list, List<String> varList, Map<String, Integer> varMap, Map<String, Integer> funcCalls, Map<String, Integer> globalVars) {
 		this.inputArray = list;
 		this.initializeExpression();
@@ -29,10 +42,6 @@ public class ThreeAddressCode {
 	 * Remove enclosing parenthesis, if any. Also handle unary operations
 	 */
 	private void initializeExpression() {
-//		if(this.inputArray.get(0).getName().equals("(") && this.inputArray.get(this.inputArray.size()-1).getName().equals("(")) {
-//			this.inputArray.remove(0);
-//			this.inputArray.remove(this.inputArray.size()-1);
-//		}
 		boolean unaryFlag = false;
 		for(int i = 0; i < this.inputArray.size(); i++){
 			if(this.inputArray.get(i).getName().equals("-")) {
@@ -84,13 +93,6 @@ public class ThreeAddressCode {
 		while(!operatorStack.isEmpty()) {
 			evaluateExpression(operatorStack.pop(), valueStack.pop(), valueStack.pop());
 		}
-		for(int i = 0; i < valueStack.size(); i++) {
-			//System.out.println(valueStack.pop());
-		}
-		for(int i = 0; i < localVariables.size(); i++) {
-			//System.out.println(localVariables.get(i));
-		}
-		//System.out.println("wass");
 	}
 
 	/**
@@ -99,14 +101,17 @@ public class ThreeAddressCode {
 	 */
 	private void evaluateToken(Token currentToken, Token nextToken, Token nnextToken) {
 		String cToken = currentToken.getName();
+		/**
+		 * If its one of the 4 arithmetic operators.  
+		 */
 		if(cToken.equals("+") || cToken.equals("-") || cToken.equals("*") || cToken.equals("/")) {
 			while(!operatorStack.isEmpty() && hasPrecedence(cToken.charAt(0),operatorStack.peek().getName().charAt(0))) {
 				evaluateExpression(operatorStack.pop(), valueStack.pop(), valueStack.pop());
 			}
 			operatorStack.push(currentToken);
-		} else if(cToken.equals("(") || cToken.equals("[")) {
+		} else if(cToken.equals("(") || cToken.equals("[")) {//If the current token is one of the open bracket/brace
 			operatorStack.push(currentToken);
-		} else if(cToken.equals(")") || cToken.equals("]")) {
+		} else if(cToken.equals(")") || cToken.equals("]")) {//If the current token is one of the closing bracket/brace
 			while(!operatorStack.isEmpty() && (!operatorStack.peek().getName().equals("(") && !operatorStack.peek().getName().equals("["))) {
 				evaluateExpression(operatorStack.pop(), valueStack.pop(), valueStack.pop());
 			}
@@ -152,7 +157,6 @@ public class ThreeAddressCode {
 							}
 							
 						}
-						//localVariables.add(operatorStack.pop().getName()+"("+valueStack.pop()+")");
 					}
 				}
 				else {
@@ -180,16 +184,8 @@ public class ThreeAddressCode {
 				} else {
 					valueStack.push("LOCAL["+varMap.get(cToken)+"]");
 				}
-				//valueStack.push(cToken);
 			}
 		}
-//		System.out.println(".........");
-//		for(int i = 0; i < valueStack.size(); i++) {
-//			System.out.print(valueStack.pop()+" ");
-//		}
-//		for(int i = 0; i < operatorStack.size(); i++) {
-//			System.out.print(operatorStack.pop().getName()+" ");
-//		}
 	}
 	
 	/**
@@ -215,8 +211,13 @@ public class ThreeAddressCode {
 		}
 	}
 	
-	// Returns true if 'op2' has higher or same precedence as 'op1',
-    // otherwise returns false.
+	/**
+	 * Returns true if 'op2' has higher or same precedence as 'op1',
+     * otherwise returns false.
+	 * @param op1
+	 * @param op2
+	 * @return
+	 */
 	public boolean hasPrecedence(char op1, char op2)
     {
         if (op2 == '(' || op2 == ')')
